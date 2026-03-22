@@ -1,11 +1,14 @@
 from fastapi import FastAPI
+from app.core.config import settings
 
-app = FastAPI(title="AI Twitch Clip Editor API")
+app = FastAPI(title=settings.app_name)
+
 
 @app.get("/")
 def root():
     return {"message": "Backend running"}
 
+
 @app.get("/health")
 def health_check():
-    return {"status": "good"}
+    return {"status": "ok"}
