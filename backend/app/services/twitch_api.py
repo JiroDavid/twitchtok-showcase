@@ -2,9 +2,11 @@ import requests
 
 from app.core.config import settings
 from urllib.parse import urlparse
+from pathlib import Path
+import yt_dlp
 
 TWITCH_HELIX_BASE_URL = "https://api.twitch.tv/helix"
-
+DOWNLOADS_DIR = Path("storage/downloads")
 
 def get_authenticated_user(access_token: str) -> dict:
     response = requests.get(
@@ -60,3 +62,26 @@ def extract_clip_slug(clip_url: str) -> str:
             return path_parts[clip_index + 1]
 
     raise ValueError("Could not extract clip slug from URL")
+
+def download_twitch_clip(clip_url: str, clip_slug: str) -> dict:
+    DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+    output_template = str(DOWNLOADS_DIR / f"{clip_slug}.%(ext)s")
+
+    ydl_opts = {
+        "outtmpl": output_template,
+        "format": "mp4/best",
+        "noplaylist": True,
+        "quiet": True,
+        "no_warnings": True,
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(clip_url, download=True)
+        downloaded_path = Path(ydl.prepare_filename(info))
+
+    return {
+        "download_path": str(downloaded_path),
+        "filename": downloaded_path.name,
+        "info": info,
+    }
