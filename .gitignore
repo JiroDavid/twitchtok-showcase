@@ -22,6 +22,10 @@ node_modules/
 .next/
 
 # Project storage
-backend/storage/downloads/
-backend/storage/outputs/
-backend/storage/temp/
+backend/storage/downloads/*
+backend/storage/temp/*
+backend/storage/outputs/*
+
+!backend/storage/downloads/.gitkeep
+!backend/storage/temp/.gitkeep
+!backend/storage/outputs/.gitkeep
