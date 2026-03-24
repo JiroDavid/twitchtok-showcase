@@ -9,7 +9,7 @@ class ClipDownloadJobRequest(BaseModel):
 
 class VideoProcessJobRequest(BaseModel):
     input_path: str
-    layout: Literal["cropped"]
+    layout: Literal["cropped", "fullscreen"]
 
 
 class JobCreateResponse(BaseModel):

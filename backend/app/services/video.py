@@ -24,28 +24,57 @@ def process_video_to_vertical(
             "crop=in_h*9/16:in_h:(in_w-in_h*9/16)/2:0,"
             "scale=1080:1920"
         )
+
+        command = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(input_file),
+            "-vf",
+            vf,
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "18",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            str(output_path),
+        ]
+
+    elif layout == "fullscreen":
+        filter_complex = (
+            "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,"
+            "crop=1080:1920,boxblur=20:10[bg];"
+            "[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[fg];"
+            "[bg][fg]overlay=(W-w)/2:(H-h)/2"
+        )
+
+        command = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(input_file),
+            "-filter_complex",
+            filter_complex,
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "18",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            str(output_path),
+        ]
+
     else:
         raise ValueError(f"Unsupported layout: {layout}")
-
-    command = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        str(input_file),
-        "-vf",
-        vf,
-        "-c:v",
-        "libx264",
-        "-preset",
-        "medium",
-        "-crf",
-        "18",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "192k",
-        str(output_path),
-    ]
 
     result = subprocess.run(command, capture_output=True, text=True)
 
