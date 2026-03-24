@@ -10,6 +10,7 @@ class ClipResolveResponse(BaseModel):
     clip_slug: str
     source_type: str
 
+
 class ClipDownloadRequest(BaseModel):
     clip_url: HttpUrl
 

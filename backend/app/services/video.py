@@ -1,0 +1,59 @@
+from pathlib import Path
+import subprocess
+
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+OUTPUTS_DIR = BASE_DIR / "storage" / "outputs"
+OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def process_video_to_vertical(
+    input_path: str,
+    output_filename: str,
+    layout: str,
+) -> dict:
+    input_file = Path(input_path)
+
+    if not input_file.exists():
+        raise FileNotFoundError(f"Input video not found: {input_path}")
+
+    output_path = OUTPUTS_DIR / output_filename
+
+    if layout == "cropped":
+        vf = (
+            "crop=in_h*9/16:in_h:(in_w-in_h*9/16)/2:0,"
+            "scale=1080:1920"
+        )
+    else:
+        raise ValueError(f"Unsupported layout: {layout}")
+
+    command = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(input_file),
+        "-vf",
+        vf,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "medium",
+        "-crf",
+        "18",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        str(output_path),
+    ]
+
+    result = subprocess.run(command, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or "FFmpeg processing failed")
+
+    return {
+        "output_path": str(output_path),
+        "filename": output_filename,
+        "layout": layout,
+    }

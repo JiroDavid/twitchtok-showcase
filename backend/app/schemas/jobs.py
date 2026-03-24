@@ -1,8 +1,15 @@
+from typing import Literal
+
 from pydantic import BaseModel, HttpUrl
 
 
 class ClipDownloadJobRequest(BaseModel):
     clip_url: HttpUrl
+
+
+class VideoProcessJobRequest(BaseModel):
+    input_path: str
+    layout: Literal["cropped"]
 
 
 class JobCreateResponse(BaseModel):
