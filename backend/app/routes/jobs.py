@@ -36,7 +36,7 @@ def process_clip_download_job(job_id: str, clip_url: str) -> None:
         update_job_status(job_id, "failed", error=str(exc))
 
 
-def process_video_job(job_id: str, input_path: str, layout: str) -> None:
+def process_video_job(job_id: str, input_path: str, layout: str, stacked_config=None) -> None:
     try:
         update_job_status(job_id, "processing")
 
@@ -48,6 +48,7 @@ def process_video_job(job_id: str, input_path: str, layout: str) -> None:
             input_path=input_path,
             output_filename=output_filename,
             layout=layout,
+            stacked_config=stacked_config,
         )
 
         update_job_status(
@@ -91,6 +92,7 @@ def create_video_process_job(
 ):
     input_path = payload.input_path
     layout = payload.layout
+    stacked_config = payload.stacked_config
 
     input_file = Path(input_path)
     if not input_file.exists():
@@ -101,10 +103,17 @@ def create_video_process_job(
         payload={
             "input_path": input_path,
             "layout": layout,
+            "stacked_config": stacked_config.dict() if stacked_config else None,
         },
     )
 
-    background_tasks.add_task(process_video_job, job_id, input_path, layout)
+    background_tasks.add_task(
+        process_video_job,
+        job_id,
+        input_path,
+        layout,
+        stacked_config.dict() if stacked_config else None,
+    )
 
     return JobCreateResponse(job_id=job_id, status="queued")
 
