@@ -73,6 +73,39 @@ def process_video_to_vertical(
             str(output_path),
         ]
 
+    elif layout == "stacked":
+        filter_complex = (
+            "[0:v]crop=in_w*0.4:in_h*0.4:in_w*0.55:in_h*0.05,"
+            "scale=1080:672[top];"
+            "[0:v]crop=in_h*9/16:in_h:(in_w-in_h*9/16)/2:0,"
+            "scale=1080:1248[bottom];"
+            "[top][bottom]vstack=inputs=2[outv]"
+        )
+
+        command = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(input_file),
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            "[outv]",
+            "-map",
+            "0:a?",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "18",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            str(output_path),
+        ]
+
     else:
         raise ValueError(f"Unsupported layout: {layout}")
 
