@@ -8,7 +8,7 @@ from app.schemas.jobs import (
     JobStatusResponse,
     VideoProcessJobRequest,
 )
-from app.services.jobs import create_job, get_job, update_job_status
+from app.services.jobs import create_job, get_job, update_job_status, list_jobs
 from app.services.twitch_api import download_twitch_clip, extract_clip_slug
 from app.services.video import process_video_to_vertical
 
@@ -145,3 +145,8 @@ def get_job_status(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found")
 
     return JobStatusResponse(**job)
+
+@router.get("", response_model=list[JobStatusResponse])
+def get_all_jobs():
+    jobs = list_jobs()
+    return [JobStatusResponse(**job) for job in jobs]

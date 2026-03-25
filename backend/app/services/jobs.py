@@ -40,3 +40,7 @@ def update_job_status(
 
     if error is not None:
         job["error"] = error
+
+
+def list_jobs() -> list[dict]:
+    return list(jobs_store.values())
