@@ -80,21 +80,15 @@ def process_video_to_vertical(
             bottom = stacked_config["bottom_crop"]
 
             filter_complex = (
-                # TOP (facecam)
                 f"[0:v]crop={top['w']}:{top['h']}:{top['x']}:{top['y']},"
                 "scale=1080:672:force_original_aspect_ratio=decrease,"
                 "pad=1080:672:(ow-iw)/2:(oh-ih)/2[top];"
-
-                # BOTTOM (gameplay)
                 f"[0:v]crop={bottom['w']}:{bottom['h']}:{bottom['x']}:{bottom['y']},"
                 "scale=1080:1248:force_original_aspect_ratio=decrease,"
                 "pad=1080:1248:(ow-iw)/2:(oh-ih)/2[bottom];"
-
-                # STACK
                 "[top][bottom]vstack=inputs=2[outv]"
             )
         else:
-            # fallback to default preset
             filter_complex = (
                 "[0:v]crop=in_w*0.4:in_h*0.4:in_w*0.55:in_h*0.05,"
                 "scale=1080:672[top];"
@@ -139,4 +133,5 @@ def process_video_to_vertical(
         "output_path": str(output_path),
         "filename": output_filename,
         "layout": layout,
+        "output_url": f"/storage/outputs/{output_filename}",
     }

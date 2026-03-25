@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.routes.auth import router as auth_router
@@ -6,6 +9,17 @@ from app.routes.clips import router as clips_router
 from app.routes.jobs import router as jobs_router
 
 app = FastAPI(title=settings.app_name)
+
+BASE_DIR = Path(__file__).resolve().parents[1]
+STORAGE_DIR = BASE_DIR / "storage"
+DOWNLOADS_DIR = STORAGE_DIR / "downloads"
+OUTPUTS_DIR = STORAGE_DIR / "outputs"
+
+DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+
+app.mount("/storage/downloads", StaticFiles(directory=DOWNLOADS_DIR), name="downloads")
+app.mount("/storage/outputs", StaticFiles(directory=OUTPUTS_DIR), name="outputs")
 
 app.include_router(auth_router)
 app.include_router(clips_router)
