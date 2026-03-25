@@ -1,14 +1,12 @@
 from fastapi import APIRouter, HTTPException
 
-from app.schemas.clips import ClipResolveRequest, ClipResolveResponse
-from app.services.twitch_api import extract_clip_slug
 from app.schemas.clips import (
     ClipDownloadRequest,
     ClipDownloadResponse,
     ClipResolveRequest,
     ClipResolveResponse,
 )
-from app.services.twitch_api import extract_clip_slug, download_twitch_clip
+from app.services.twitch_api import download_twitch_clip, extract_clip_slug
 
 router = APIRouter(prefix="/clips", tags=["clips"])
 
@@ -24,7 +22,8 @@ def resolve_clip_url(payload: ClipResolveRequest):
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    
+
+
 @router.post("/download", response_model=ClipDownloadResponse)
 def download_clip(payload: ClipDownloadRequest):
     try:
