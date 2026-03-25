@@ -16,6 +16,8 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
 def process_clip_download_job(job_id: str, clip_url: str) -> None:
+    print(f"[jobs] Starting clip download job: job_id={job_id}, clip_url={clip_url}")
+
     try:
         update_job_status(job_id, "processing")
 
@@ -32,11 +34,20 @@ def process_clip_download_job(job_id: str, clip_url: str) -> None:
                 "source_type": "twitch_clip",
             },
         )
+
+        print(f"[jobs] Clip download job completed: job_id={job_id}")
+
     except Exception as exc:
+        print(f"[jobs] Clip download job failed: job_id={job_id}, error={exc}")
         update_job_status(job_id, "failed", error=str(exc))
 
 
 def process_video_job(job_id: str, input_path: str, layout: str, stacked_config=None) -> None:
+    print(
+        f"[jobs] Starting video job: job_id={job_id}, input_path={input_path}, "
+        f"layout={layout}, stacked_config={stacked_config}"
+    )
+
     try:
         update_job_status(job_id, "processing")
 
@@ -56,7 +67,14 @@ def process_video_job(job_id: str, input_path: str, layout: str, stacked_config=
             "completed",
             result=result,
         )
+
+        print(
+            f"[jobs] Video job completed: job_id={job_id}, "
+            f"output_path={result['output_path']}"
+        )
+
     except Exception as exc:
+        print(f"[jobs] Video job failed: job_id={job_id}, error={exc}")
         update_job_status(job_id, "failed", error=str(exc))
 
 

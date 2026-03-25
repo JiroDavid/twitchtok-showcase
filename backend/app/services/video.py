@@ -6,6 +6,8 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 OUTPUTS_DIR = BASE_DIR / "storage" / "outputs"
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
+FFMPEG_TIMEOUT_SECONDS = 180
+
 
 def process_video_to_vertical(
     input_path: str,
@@ -124,10 +126,23 @@ def process_video_to_vertical(
     else:
         raise ValueError(f"Unsupported layout: {layout}")
 
-    result = subprocess.run(command, capture_output=True, text=True)
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=FFMPEG_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"FFmpeg timed out after {FFMPEG_TIMEOUT_SECONDS} seconds for layout '{layout}'"
+        ) from exc
 
     if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or "FFmpeg processing failed")
+        stderr = result.stderr.strip() if result.stderr else ""
+        stdout = result.stdout.strip() if result.stdout else ""
+        error_message = stderr or stdout or "FFmpeg processing failed"
+        raise RuntimeError(error_message)
 
     return {
         "output_path": str(output_path),
