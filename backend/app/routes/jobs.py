@@ -53,7 +53,8 @@ def process_video_job(job_id: str, input_path: str, layout: str, stacked_config=
 
         input_file = Path(input_path)
         stem = input_file.stem
-        output_filename = f"{stem}_{layout}.mp4"
+        short_job_id = job_id.split("-")[0]
+        output_filename = f"{stem}_{layout}_{short_job_id}.mp4"
 
         result = process_video_to_vertical(
             input_path=input_path,
