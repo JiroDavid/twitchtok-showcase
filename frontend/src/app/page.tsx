@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type LayoutOption = "cropped" | "fullscreen" | "stacked";
-type SourceMode = "twitch_url" | "downloaded_file";
+type SourceMode = "twitch_clips" | "twitch_url" | "downloaded_file";
 
 type JobCreateResponse = {
   job_id: string;
@@ -103,6 +103,9 @@ export default function Home() {
 
   const [twitchUser, setTwitchUser] = useState<TwitchUser | null>(null);
   const [twitchClips, setTwitchClips] = useState<TwitchClip[]>([]);
+  const [selectedTwitchClip, setSelectedTwitchClip] = useState<TwitchClip | null>(
+    null
+  );
   const [oauthStatus, setOauthStatus] = useState<string | null>(null);
 
   const outputVideoUrl = useMemo(() => {
@@ -160,11 +163,14 @@ export default function Home() {
         setOauthStatus("success");
 
         if ((parsedPayload.clips ?? []).length > 0) {
-          setSourceMode("twitch_url");
+          setSelectedTwitchClip(parsedPayload.clips[0]);
+          setSourceMode("twitch_clips");
         }
       } catch (error) {
         console.error("Failed to parse OAuth payload:", error);
-        setRequestError("OAuth succeeded, but the returned payload could not be read.");
+        setRequestError(
+          "OAuth succeeded, but the returned payload could not be read."
+        );
         setOauthStatus("error");
       }
     }
@@ -211,6 +217,30 @@ export default function Home() {
 
         const data: JobCreateResponse = await response.json();
         setDownloadJobId(data.job_id);
+      } else if (sourceMode === "twitch_clips") {
+        if (!selectedTwitchClip?.url) {
+          throw new Error("Please select a Twitch clip first.");
+        }
+
+        const response = await fetch(`${API_BASE_URL}/jobs/download-clip`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            clip_url: selectedTwitchClip.url,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `Failed to create Twitch clip download job (${response.status}): ${errorText}`
+          );
+        }
+
+        const data: JobCreateResponse = await response.json();
+        setDownloadJobId(data.job_id);
       } else {
         if (!selectedDownloadedPath) {
           throw new Error("Please select a downloaded file.");
@@ -250,16 +280,27 @@ export default function Home() {
     window.location.href = `${API_BASE_URL}/auth/twitch/login`;
   }
 
-  function handleUseClip(clip: TwitchClip) {
-    setSourceMode("twitch_url");
+  function handleSelectTwitchClip(clip: TwitchClip) {
+    setSelectedTwitchClip(clip);
+    setSourceMode("twitch_clips");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleUseClipAsUrl(clip: TwitchClip) {
     setClipUrl(clip.url);
+    setSourceMode("twitch_url");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function handleLogoutTwitch() {
     setTwitchUser(null);
     setTwitchClips([]);
+    setSelectedTwitchClip(null);
     setOauthStatus(null);
+
+    if (sourceMode === "twitch_clips") {
+      setSourceMode("twitch_url");
+    }
   }
 
   useEffect(() => {
@@ -398,6 +439,15 @@ export default function Home() {
     downloadJobStatus?.status ??
     (isSubmitting ? "submitting" : "idle");
 
+  const submitButtonLabel =
+    isSubmitting
+      ? "Submitting..."
+      : sourceMode === "twitch_clips"
+      ? "Download Selected Clip and Process"
+      : sourceMode === "twitch_url"
+      ? "Download and Process URL"
+      : "Process Downloaded File";
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-10">
@@ -410,8 +460,8 @@ export default function Home() {
               AI-Assisted Twitch Clip Editing
             </h1>
             <p className="mt-4 max-w-3xl text-base text-zinc-400 sm:text-lg">
-              Process Twitch clips into vertical videos using either a pasted clip
-              URL, your authenticated Twitch clips, or an already downloaded test file.
+              Process Twitch clips into vertical videos using your authenticated
+              Twitch clips, a pasted clip URL, or an already downloaded test file.
             </p>
           </div>
 
@@ -464,6 +514,13 @@ export default function Home() {
                   </span>
                 </div>
 
+                <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm">
+                  <span className="text-zinc-400">Loaded clips: </span>
+                  <span className="font-medium text-zinc-100">
+                    {twitchClips.length}
+                  </span>
+                </div>
+
                 <button
                   type="button"
                   onClick={handleLogoutTwitch}
@@ -480,11 +537,23 @@ export default function Home() {
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
             <h2 className="text-xl font-semibold">Input Source</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
-              Keep Twitch URL ingest for real workflow, and keep downloaded file
-              mode for fast backend testing.
+              Choose whether to process an authenticated Twitch clip, a manual Twitch
+              clip URL, or a previously downloaded local file.
             </p>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => setSourceMode("twitch_clips")}
+                className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                  sourceMode === "twitch_clips"
+                    ? "bg-violet-500 text-white"
+                    : "bg-zinc-950 text-zinc-300 hover:bg-zinc-800"
+                }`}
+              >
+                Twitch Clips
+              </button>
+
               <button
                 type="button"
                 onClick={() => setSourceMode("twitch_url")}
@@ -496,6 +565,7 @@ export default function Home() {
               >
                 Twitch Clip URL
               </button>
+
               <button
                 type="button"
                 onClick={() => setSourceMode("downloaded_file")}
@@ -510,7 +580,48 @@ export default function Home() {
             </div>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-              {sourceMode === "twitch_url" ? (
+              {sourceMode === "twitch_clips" ? (
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+                  <h3 className="text-sm font-semibold text-zinc-100">
+                    Selected Twitch Clip
+                  </h3>
+
+                  {!twitchUser ? (
+                    <p className="mt-3 text-sm text-zinc-500">
+                      Log in with Twitch to load clips for this source mode.
+                    </p>
+                  ) : !selectedTwitchClip ? (
+                    <p className="mt-3 text-sm text-zinc-500">
+                      No Twitch clip selected yet. Choose one from the clips panel.
+                    </p>
+                  ) : (
+                    <div className="mt-4 space-y-4">
+                      {selectedTwitchClip.thumbnail_url ? (
+                        <img
+                          src={selectedTwitchClip.thumbnail_url}
+                          alt={selectedTwitchClip.title ?? "Selected Twitch clip"}
+                          className="h-44 w-full rounded-xl border border-zinc-800 object-cover"
+                        />
+                      ) : null}
+
+                      <div>
+                        <p className="text-sm font-medium text-zinc-100">
+                          {selectedTwitchClip.title || "Untitled clip"}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-400">
+                          Creator: {selectedTwitchClip.creator_name ?? "Unknown"}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-400">
+                          Views: {selectedTwitchClip.view_count ?? 0}
+                        </p>
+                        <p className="mt-1 break-all text-xs text-zinc-500">
+                          {selectedTwitchClip.url}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : sourceMode === "twitch_url" ? (
                 <div>
                   <label
                     htmlFor="clipUrl"
@@ -582,14 +693,14 @@ export default function Home() {
 
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={
+                  isSubmitting ||
+                  (sourceMode === "twitch_clips" && !selectedTwitchClip) ||
+                  (sourceMode === "downloaded_file" && !selectedDownloadedPath)
+                }
                 className="w-full rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting
-                  ? "Submitting..."
-                  : sourceMode === "twitch_url"
-                  ? "Download and Process"
-                  : "Process Downloaded File"}
+                {submitButtonLabel}
               </button>
             </form>
 
@@ -602,6 +713,13 @@ export default function Home() {
               <div>
                 <span className="text-zinc-500">Overall status:</span>{" "}
                 <span className="text-zinc-200">{overallStatus}</span>
+              </div>
+
+              <div>
+                <span className="text-zinc-500">Selected Twitch clip:</span>{" "}
+                <span className="text-zinc-200">
+                  {selectedTwitchClip?.title ?? "None"}
+                </span>
               </div>
 
               <div>
@@ -652,8 +770,9 @@ export default function Home() {
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
               <h2 className="text-xl font-semibold">Your Twitch Clips</h2>
               <p className="mt-2 text-sm leading-6 text-zinc-400">
-                After Twitch login, choose one of your clips and feed it into the
-                existing processing workflow.
+                Pick one of your authenticated Twitch clips and use it directly as
+                a source, or send it into manual URL mode if you want to inspect/edit
+                the URL first.
               </p>
 
               <div className="mt-6">
@@ -668,60 +787,83 @@ export default function Home() {
                   </div>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {twitchClips.map((clip) => (
-                      <div
-                        key={clip.id}
-                        className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950"
-                      >
-                        {clip.thumbnail_url ? (
-                          <img
-                            src={clip.thumbnail_url}
-                            alt={clip.title ?? "Twitch clip thumbnail"}
-                            className="h-40 w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-40 items-center justify-center bg-zinc-900 text-sm text-zinc-500">
-                            No thumbnail
-                          </div>
-                        )}
+                    {twitchClips.map((clip) => {
+                      const isSelected = selectedTwitchClip?.id === clip.id;
 
-                        <div className="p-4">
-                          <h3 className="line-clamp-2 text-sm font-semibold text-zinc-100">
-                            {clip.title || "Untitled clip"}
-                          </h3>
+                      return (
+                        <div
+                          key={clip.id}
+                          className={`overflow-hidden rounded-2xl border bg-zinc-950 transition ${
+                            isSelected
+                              ? "border-violet-500 ring-1 ring-violet-500"
+                              : "border-zinc-800"
+                          }`}
+                        >
+                          {clip.thumbnail_url ? (
+                            <img
+                              src={clip.thumbnail_url}
+                              alt={clip.title ?? "Twitch clip thumbnail"}
+                              className="h-40 w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-40 items-center justify-center bg-zinc-900 text-sm text-zinc-500">
+                              No thumbnail
+                            </div>
+                          )}
 
-                          <div className="mt-3 space-y-1 text-xs text-zinc-400">
-                            <p>Creator: {clip.creator_name ?? "Unknown"}</p>
-                            <p>Views: {clip.view_count ?? 0}</p>
-                            <p>
-                              Created:{" "}
-                              {clip.created_at
-                                ? new Date(clip.created_at).toLocaleString()
-                                : "Unknown"}
-                            </p>
-                          </div>
+                          <div className="p-4">
+                            <div className="mb-2 flex items-start justify-between gap-3">
+                              <h3 className="line-clamp-2 text-sm font-semibold text-zinc-100">
+                                {clip.title || "Untitled clip"}
+                              </h3>
+                              {isSelected ? (
+                                <span className="rounded-full bg-violet-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                                  Selected
+                                </span>
+                              ) : null}
+                            </div>
 
-                          <div className="mt-4 flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleUseClip(clip)}
-                              className="flex-1 rounded-xl bg-violet-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-400"
-                            >
-                              Use this clip
-                            </button>
+                            <div className="space-y-1 text-xs text-zinc-400">
+                              <p>Creator: {clip.creator_name ?? "Unknown"}</p>
+                              <p>Views: {clip.view_count ?? 0}</p>
+                              <p>
+                                Created:{" "}
+                                {clip.created_at
+                                  ? new Date(clip.created_at).toLocaleString()
+                                  : "Unknown"}
+                              </p>
+                            </div>
 
-                            <a
-                              href={clip.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-800"
-                            >
-                              Open
-                            </a>
+                            <div className="mt-4 grid grid-cols-3 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleSelectTwitchClip(clip)}
+                                className="rounded-xl bg-violet-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-violet-400"
+                              >
+                                Select
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleUseClipAsUrl(clip)}
+                                className="rounded-xl border border-zinc-700 px-3 py-2 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-800"
+                              >
+                                Use as URL
+                              </button>
+
+                              <a
+                                href={clip.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="rounded-xl border border-zinc-700 px-3 py-2 text-center text-xs font-semibold text-zinc-200 transition hover:bg-zinc-800"
+                              >
+                                Open
+                              </a>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
