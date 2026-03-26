@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type LayoutOption = "cropped" | "fullscreen" | "stacked";
+type SourceMode = "twitch_url" | "downloaded_file";
 
 type JobCreateResponse = {
   job_id: string;
@@ -32,13 +33,29 @@ type JobStatusResponse = {
   error: string | null;
 };
 
+type DownloadedClip = {
+  filename: string;
+  download_path: string;
+  url: string;
+};
+
+type DownloadedClipsResponse = {
+  clips: DownloadedClip[];
+  count: number;
+};
+
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 export default function Home() {
+  const [sourceMode, setSourceMode] = useState<SourceMode>("twitch_url");
+
   const [clipUrl, setClipUrl] = useState(
     "https://clips.twitch.tv/AuspiciousAnimatedDelicataSoonerLater-0B3bBhlmYjXEWKEs"
   );
   const [layout, setLayout] = useState<LayoutOption>("cropped");
+
+  const [downloadedClips, setDownloadedClips] = useState<DownloadedClip[]>([]);
+  const [selectedDownloadedPath, setSelectedDownloadedPath] = useState("");
 
   const [downloadJobId, setDownloadJobId] = useState<string | null>(null);
   const [downloadJobStatus, setDownloadJobStatus] =
@@ -60,6 +77,36 @@ export default function Home() {
     return `${API_BASE_URL}${outputUrl}`;
   }, [processJobStatus]);
 
+  useEffect(() => {
+    async function fetchDownloadedClips() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/clips/downloaded`);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `Failed to fetch downloaded clips (${response.status}): ${errorText}`
+          );
+        }
+
+        const data: DownloadedClipsResponse = await response.json();
+        setDownloadedClips(data.clips);
+
+        if (data.clips.length > 0 && !selectedDownloadedPath) {
+          setSelectedDownloadedPath(data.clips[0].download_path);
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unknown error fetching downloaded clips";
+        setRequestError(message);
+      }
+    }
+
+    fetchDownloadedClips();
+  }, [selectedDownloadedPath]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -74,25 +121,52 @@ export default function Home() {
     setProcessJobStatus(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/jobs/download-clip`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          clip_url: clipUrl,
-        }),
-      });
+      if (sourceMode === "twitch_url") {
+        const response = await fetch(`${API_BASE_URL}/jobs/download-clip`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            clip_url: clipUrl,
+          }),
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `Failed to create download job (${response.status}): ${errorText}`
-        );
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `Failed to create download job (${response.status}): ${errorText}`
+          );
+        }
+
+        const data: JobCreateResponse = await response.json();
+        setDownloadJobId(data.job_id);
+      } else {
+        if (!selectedDownloadedPath) {
+          throw new Error("Please select a downloaded file.");
+        }
+
+        const response = await fetch(`${API_BASE_URL}/jobs/process-video`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            input_path: selectedDownloadedPath,
+            layout,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `Failed to create process job (${response.status}): ${errorText}`
+          );
+        }
+
+        const data: JobCreateResponse = await response.json();
+        setProcessJobId(data.job_id);
       }
-
-      const data: JobCreateResponse = await response.json();
-      setDownloadJobId(data.job_id);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unknown request error";
@@ -248,36 +322,93 @@ export default function Home() {
             AI-Assisted Twitch Clip Editing
           </h1>
           <p className="mt-4 max-w-3xl text-base text-zinc-400 sm:text-lg">
-            Paste a Twitch clip URL, let the backend download it, process it
-            into a vertical layout, and preview the rendered result.
+            Process Twitch clips into vertical videos using either a pasted clip
+            URL or an already downloaded local test file.
           </p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-            <h2 className="text-xl font-semibold">Twitch Clip Processing</h2>
+            <h2 className="text-xl font-semibold">Input Source</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
-              This is the next step after manual file-path testing. Twitch OAuth
-              and clip browsing will come after this flow works cleanly.
+              Keep Twitch URL ingest for real workflow, and keep downloaded file
+              mode for fast backend testing.
             </p>
 
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setSourceMode("twitch_url")}
+                className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                  sourceMode === "twitch_url"
+                    ? "bg-violet-500 text-white"
+                    : "bg-zinc-950 text-zinc-300 hover:bg-zinc-800"
+                }`}
+              >
+                Twitch Clip URL
+              </button>
+              <button
+                type="button"
+                onClick={() => setSourceMode("downloaded_file")}
+                className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                  sourceMode === "downloaded_file"
+                    ? "bg-violet-500 text-white"
+                    : "bg-zinc-950 text-zinc-300 hover:bg-zinc-800"
+                }`}
+              >
+                Downloaded File
+              </button>
+            </div>
+
             <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-              <div>
-                <label
-                  htmlFor="clipUrl"
-                  className="mb-2 block text-sm font-medium text-zinc-200"
-                >
-                  Twitch clip URL
-                </label>
-                <input
-                  id="clipUrl"
-                  type="text"
-                  value={clipUrl}
-                  onChange={(event) => setClipUrl(event.target.value)}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
-                  placeholder="https://clips.twitch.tv/YourClipSlug"
-                />
-              </div>
+              {sourceMode === "twitch_url" ? (
+                <div>
+                  <label
+                    htmlFor="clipUrl"
+                    className="mb-2 block text-sm font-medium text-zinc-200"
+                  >
+                    Twitch clip URL
+                  </label>
+                  <input
+                    id="clipUrl"
+                    type="text"
+                    value={clipUrl}
+                    onChange={(event) => setClipUrl(event.target.value)}
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
+                    placeholder="https://clips.twitch.tv/YourClipSlug"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label
+                    htmlFor="downloadedFile"
+                    className="mb-2 block text-sm font-medium text-zinc-200"
+                  >
+                    Downloaded file
+                  </label>
+                  <select
+                    id="downloadedFile"
+                    value={selectedDownloadedPath}
+                    onChange={(event) =>
+                      setSelectedDownloadedPath(event.target.value)
+                    }
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
+                  >
+                    {downloadedClips.length === 0 ? (
+                      <option value="">No downloaded files found</option>
+                    ) : (
+                      downloadedClips.map((clip) => (
+                        <option
+                          key={clip.download_path}
+                          value={clip.download_path}
+                        >
+                          {clip.filename}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label
@@ -305,11 +436,20 @@ export default function Home() {
                 disabled={isSubmitting}
                 className="w-full rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting ? "Submitting..." : "Download and Process"}
+                {isSubmitting
+                  ? "Submitting..."
+                  : sourceMode === "twitch_url"
+                  ? "Download and Process"
+                  : "Process Downloaded File"}
               </button>
             </form>
 
             <div className="mt-6 space-y-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm">
+              <div>
+                <span className="text-zinc-500">Mode:</span>{" "}
+                <span className="text-zinc-200">{sourceMode}</span>
+              </div>
+
               <div>
                 <span className="text-zinc-500">Overall status:</span>{" "}
                 <span className="text-zinc-200">{overallStatus}</span>
@@ -362,8 +502,7 @@ export default function Home() {
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
             <h2 className="text-xl font-semibold">Output Preview</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
-              Once the clip is downloaded and processed, the rendered video will
-              appear here.
+              Once processing completes, the rendered video will appear here.
             </p>
 
             <div className="mt-6 flex min-h-[640px] items-center justify-center rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 p-4">
@@ -376,8 +515,7 @@ export default function Home() {
                 />
               ) : (
                 <div className="text-center text-sm text-zinc-500">
-                  No processed video yet. Submit a Twitch clip URL to preview
-                  the output.
+                  No processed video yet. Submit a job to preview the output.
                 </div>
               )}
             </div>
