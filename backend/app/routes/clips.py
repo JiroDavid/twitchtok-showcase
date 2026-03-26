@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException
 
 from app.schemas.clips import (
@@ -9,6 +11,25 @@ from app.schemas.clips import (
 from app.services.twitch_api import download_twitch_clip, extract_clip_slug
 
 router = APIRouter(prefix="/clips", tags=["clips"])
+
+DOWNLOADS_DIR = Path("storage/downloads")
+
+
+@router.get("/downloaded")
+def list_downloaded_clips():
+    DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+    files = []
+    for file_path in sorted(DOWNLOADS_DIR.glob("*.mp4")):
+        files.append(
+            {
+                "filename": file_path.name,
+                "download_path": str(file_path),
+                "url": f"/storage/downloads/{file_path.name}",
+            }
+        )
+
+    return {"clips": files, "count": len(files)}
 
 
 @router.post("/resolve", response_model=ClipResolveResponse)
