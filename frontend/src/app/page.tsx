@@ -1,9 +1,22 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type LayoutOption = "cropped" | "fullscreen" | "stacked";
 type SourceMode = "twitch_clips" | "twitch_url" | "downloaded_file";
+
+type CropBox = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+type StackedConfig = {
+  top_crop: CropBox;
+  bottom_crop: CropBox;
+  split_ratio_top: number;
+};
 
 type JobCreateResponse = {
   job_id: string;
@@ -75,7 +88,37 @@ type OAuthPayload = {
   scope?: string[];
 };
 
+type DragTarget = "top_crop" | "bottom_crop";
+type DragMode = "move" | "resize";
+
+type DragState = {
+  target: DragTarget;
+  mode: DragMode;
+  startClientX: number;
+  startClientY: number;
+  startBox: CropBox;
+} | null;
+
 const API_BASE_URL = "http://localhost:8000";
+
+const DEFAULT_STACKED_CONFIG: StackedConfig = {
+  top_crop: { x: 1340, y: 40, w: 520, h: 520 },
+  bottom_crop: { x: 420, y: 0, w: 1080, h: 1080 },
+  split_ratio_top: 0.4,
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function roundBox(box: CropBox): CropBox {
+  return {
+    x: Math.round(box.x),
+    y: Math.round(box.y),
+    w: Math.round(box.w),
+    h: Math.round(box.h),
+  };
+}
 
 export default function Home() {
   const [sourceMode, setSourceMode] = useState<SourceMode>("twitch_url");
@@ -84,6 +127,9 @@ export default function Home() {
     "https://clips.twitch.tv/AuspiciousAnimatedDelicataSoonerLater-0B3bBhlmYjXEWKEs"
   );
   const [layout, setLayout] = useState<LayoutOption>("cropped");
+
+  const [stackedConfig, setStackedConfig] =
+    useState<StackedConfig>(DEFAULT_STACKED_CONFIG);
 
   const [downloadedClips, setDownloadedClips] = useState<DownloadedClip[]>([]);
   const [selectedDownloadedPath, setSelectedDownloadedPath] = useState("");
@@ -108,12 +154,59 @@ export default function Home() {
   );
   const [oauthStatus, setOauthStatus] = useState<string | null>(null);
 
+  const [isCropEditorOpen, setIsCropEditorOpen] = useState(false);
+  const [cropDraft, setCropDraft] = useState<StackedConfig>(DEFAULT_STACKED_CONFIG);
+  const [videoNaturalSize, setVideoNaturalSize] = useState({ width: 1920, height: 1080 });
+  const [videoDisplaySize, setVideoDisplaySize] = useState({ width: 1, height: 1 });
+  const [dragState, setDragState] = useState<DragState>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const previewContainerRef = useRef<HTMLDivElement | null>(null);
+
   const outputVideoUrl = useMemo(() => {
     const result = processJobStatus?.result as ProcessJobResult | null;
     const outputUrl = result?.output_url;
     if (!outputUrl) return null;
     return `${API_BASE_URL}${outputUrl}`;
   }, [processJobStatus]);
+
+  const selectedDownloadedClip = useMemo(() => {
+    return downloadedClips.find(
+      (clip) => clip.download_path === selectedDownloadedPath
+    ) ?? null;
+  }, [downloadedClips, selectedDownloadedPath]);
+
+  const cropEditorPreviewUrl = useMemo(() => {
+    if (!selectedDownloadedClip) return null;
+    return `${API_BASE_URL}${selectedDownloadedClip.url}`;
+  }, [selectedDownloadedClip]);
+
+  const stackedConfigIsValid = [stackedConfig.top_crop, stackedConfig.bottom_crop].every(
+    (box) =>
+      Number.isFinite(box.x) &&
+      Number.isFinite(box.y) &&
+      Number.isFinite(box.w) &&
+      Number.isFinite(box.h) &&
+      box.x >= 0 &&
+      box.y >= 0 &&
+      box.w > 0 &&
+      box.h > 0
+  );
+
+  function buildProcessRequestBody(inputPath: string) {
+    return {
+      input_path: inputPath,
+      layout,
+      stacked_config:
+        layout === "stacked"
+          ? {
+              top_crop: stackedConfig.top_crop,
+              bottom_crop: stackedConfig.bottom_crop,
+              split_ratio_top: stackedConfig.split_ratio_top,
+            }
+          : null,
+    };
+  }
 
   useEffect(() => {
     async function fetchDownloadedClips() {
@@ -183,6 +276,65 @@ export default function Home() {
     window.history.replaceState({}, document.title, window.location.pathname);
   }, []);
 
+  useEffect(() => {
+    function handlePointerMove(event: PointerEvent) {
+      if (!dragState || !previewContainerRef.current) return;
+
+      const scaleX = videoNaturalSize.width / videoDisplaySize.width;
+      const scaleY = videoNaturalSize.height / videoDisplaySize.height;
+
+      const deltaX = (event.clientX - dragState.startClientX) * scaleX;
+      const deltaY = (event.clientY - dragState.startClientY) * scaleY;
+
+      setCropDraft((current) => {
+        const box = current[dragState.target];
+        let nextBox: CropBox = { ...dragState.startBox };
+
+        if (dragState.mode === "move") {
+          nextBox.x = clamp(
+            dragState.startBox.x + deltaX,
+            0,
+            videoNaturalSize.width - dragState.startBox.w
+          );
+          nextBox.y = clamp(
+            dragState.startBox.y + deltaY,
+            0,
+            videoNaturalSize.height - dragState.startBox.h
+          );
+        } else {
+          const minSize = 40;
+          nextBox.w = clamp(
+            dragState.startBox.w + deltaX,
+            minSize,
+            videoNaturalSize.width - dragState.startBox.x
+          );
+          nextBox.h = clamp(
+            dragState.startBox.h + deltaY,
+            minSize,
+            videoNaturalSize.height - dragState.startBox.y
+          );
+        }
+
+        return {
+          ...current,
+          [dragState.target]: roundBox(nextBox),
+        };
+      });
+    }
+
+    function handlePointerUp() {
+      setDragState(null);
+    }
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [dragState, videoDisplaySize, videoNaturalSize]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -197,6 +349,12 @@ export default function Home() {
     setProcessJobStatus(null);
 
     try {
+      if (layout === "stacked" && !stackedConfigIsValid) {
+        throw new Error(
+          "Crop boxes must use non-negative x/y values and positive width/height values."
+        );
+      }
+
       if (sourceMode === "twitch_url") {
         const response = await fetch(`${API_BASE_URL}/jobs/download-clip`, {
           method: "POST",
@@ -251,10 +409,7 @@ export default function Home() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            input_path: selectedDownloadedPath,
-            layout,
-          }),
+          body: JSON.stringify(buildProcessRequestBody(selectedDownloadedPath)),
         });
 
         if (!response.ok) {
@@ -301,6 +456,61 @@ export default function Home() {
     if (sourceMode === "twitch_clips") {
       setSourceMode("twitch_url");
     }
+  }
+
+  function openCropEditor() {
+    if (!cropEditorPreviewUrl) {
+      setRequestError(
+        "Visual crop editor currently requires a locally downloaded video. Use Downloaded File mode."
+      );
+      return;
+    }
+
+    setCropDraft({
+      top_crop: { ...stackedConfig.top_crop },
+      bottom_crop: { ...stackedConfig.bottom_crop },
+      split_ratio_top: stackedConfig.split_ratio_top,
+    });
+    setIsCropEditorOpen(true);
+  }
+
+  function closeCropEditor() {
+    setIsCropEditorOpen(false);
+    setDragState(null);
+  }
+
+  function saveCropEditor() {
+    setStackedConfig({
+      top_crop: roundBox(cropDraft.top_crop),
+      bottom_crop: roundBox(cropDraft.bottom_crop),
+      split_ratio_top: cropDraft.split_ratio_top,
+    });
+    setIsCropEditorOpen(false);
+    setDragState(null);
+  }
+
+  function startDrag(
+    event: ReactPointerEvent,
+    target: DragTarget,
+    mode: DragMode
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    setDragState({
+      target,
+      mode,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startBox: { ...cropDraft[target] },
+    });
+  }
+
+  function updateSplitRatio(value: number) {
+    setCropDraft((current) => ({
+      ...current,
+      split_ratio_top: clamp(value, 0.2, 0.8),
+    }));
   }
 
   useEffect(() => {
@@ -362,6 +572,8 @@ export default function Home() {
     if (!downloadedPath) return;
     if (processJobId) return;
 
+    const inputPath = downloadedPath;
+
     async function startProcessJob() {
       try {
         const response = await fetch(`${API_BASE_URL}/jobs/process-video`, {
@@ -369,10 +581,7 @@ export default function Home() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            input_path: downloadedPath,
-            layout,
-          }),
+          body: JSON.stringify(buildProcessRequestBody(inputPath)),
         });
 
         if (!response.ok) {
@@ -394,7 +603,7 @@ export default function Home() {
     }
 
     startProcessJob();
-  }, [downloadedPath, layout, processJobId]);
+  }, [downloadedPath, layout, processJobId, stackedConfig]);
 
   useEffect(() => {
     if (!processJobId) return;
@@ -456,6 +665,20 @@ export default function Home() {
       : overallStatus === "processing" || overallStatus === "queued"
       ? "text-amber-400"
       : "text-zinc-300";
+
+  const topPreviewStyle = {
+    left: `${(cropDraft.top_crop.x / videoNaturalSize.width) * videoDisplaySize.width}px`,
+    top: `${(cropDraft.top_crop.y / videoNaturalSize.height) * videoDisplaySize.height}px`,
+    width: `${(cropDraft.top_crop.w / videoNaturalSize.width) * videoDisplaySize.width}px`,
+    height: `${(cropDraft.top_crop.h / videoNaturalSize.height) * videoDisplaySize.height}px`,
+  };
+
+  const bottomPreviewStyle = {
+    left: `${(cropDraft.bottom_crop.x / videoNaturalSize.width) * videoDisplaySize.width}px`,
+    top: `${(cropDraft.bottom_crop.y / videoNaturalSize.height) * videoDisplaySize.height}px`,
+    width: `${(cropDraft.bottom_crop.w / videoNaturalSize.width) * videoDisplaySize.width}px`,
+    height: `${(cropDraft.bottom_crop.h / videoNaturalSize.height) * videoDisplaySize.height}px`,
+  };
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -658,7 +881,9 @@ export default function Home() {
                             {selectedTwitchClip.title || "Untitled clip"}
                           </p>
                           <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-400">
-                            <span>Creator: {selectedTwitchClip.creator_name ?? "Unknown"}</span>
+                            <span>
+                              Creator: {selectedTwitchClip.creator_name ?? "Unknown"}
+                            </span>
                             <span>•</span>
                             <span>Views: {selectedTwitchClip.view_count ?? 0}</span>
                           </div>
@@ -742,12 +967,58 @@ export default function Home() {
                   </select>
                 </div>
 
+                {layout === "stacked" && (
+                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-sm font-semibold text-zinc-100">
+                            Visual Stacked Crop Editor
+                          </h3>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            Final export stays fixed at 1080×1920. This editor only
+                            chooses the source crop areas for the top and bottom stack.
+                          </p>
+                        </div>
+                      </div>
+
+                      {sourceMode === "downloaded_file" ? (
+                        <button
+                          type="button"
+                          onClick={openCropEditor}
+                          disabled={!selectedDownloadedPath}
+                          className="rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-3 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Open Visual Crop Editor
+                        </button>
+                      ) : (
+                        <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-xs text-zinc-400">
+                          Visual crop preview currently works with locally downloaded video
+                          files. Use Downloaded File mode for the popup editor. We can add
+                          auto-download-then-open for Twitch clips next.
+                        </div>
+                      )}
+
+                      <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm">
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-zinc-400">Top / Bottom split</span>
+                          <span className="font-semibold text-zinc-100">
+                            {Math.round(stackedConfig.split_ratio_top * 100)}% /{" "}
+                            {100 - Math.round(stackedConfig.split_ratio_top * 100)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   disabled={
                     isSubmitting ||
                     (sourceMode === "twitch_clips" && !selectedTwitchClip) ||
-                    (sourceMode === "downloaded_file" && !selectedDownloadedPath)
+                    (sourceMode === "downloaded_file" && !selectedDownloadedPath) ||
+                    (layout === "stacked" && !stackedConfigIsValid)
                   }
                   className="w-full rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -776,6 +1047,13 @@ export default function Home() {
                     Selected source
                   </p>
                   <p className="mt-1 text-sm text-zinc-100">{sourceMode}</p>
+                </div>
+
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">
+                    Layout
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-100">{layout}</p>
                 </div>
 
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
@@ -999,6 +1277,192 @@ export default function Home() {
           </section>
         </div>
       </div>
+
+      {isCropEditorOpen && cropEditorPreviewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
+          <div className="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-100">
+                  Visual Stacked Crop Editor
+                </h2>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Drag the colored crop boxes over the source video. Final export remains fixed at 1080×1920.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={closeCropEditor}
+                  className="rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveCropEditor}
+                  className="rounded-xl bg-violet-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-400"
+                >
+                  Save crop
+                </button>
+              </div>
+            </div>
+
+            <div className="grid min-h-0 flex-1 gap-6 overflow-hidden p-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="min-h-0 overflow-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                <div
+                  ref={previewContainerRef}
+                  className="relative mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-zinc-700 bg-black"
+                >
+                  <video
+                    ref={videoRef}
+                    src={cropEditorPreviewUrl}
+                    controls
+                    autoPlay
+                    loop
+                    muted
+                    className="block h-auto w-full"
+                    onLoadedMetadata={(event) => {
+                      const video = event.currentTarget;
+                      setVideoNaturalSize({
+                        width: video.videoWidth,
+                        height: video.videoHeight,
+                      });
+                      setVideoDisplaySize({
+                        width: video.clientWidth,
+                        height: video.clientHeight,
+                      });
+                    }}
+                    onLoadedData={(event) => {
+                      const video = event.currentTarget;
+                      setVideoDisplaySize({
+                        width: video.clientWidth,
+                        height: video.clientHeight,
+                      });
+                    }}
+                  />
+
+                  <div className="pointer-events-none absolute inset-0">
+                    <div
+                      className="pointer-events-auto absolute border-2 border-violet-400 bg-violet-500/20 shadow-[0_0_0_9999px_rgba(0,0,0,0.15)]"
+                      style={topPreviewStyle}
+                      onPointerDown={(event) => startDrag(event, "top_crop", "move")}
+                    >
+                      <div className="absolute left-2 top-2 rounded-md bg-violet-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                        Top / facecam
+                      </div>
+                      <div
+                        className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize rounded-tl-md bg-violet-400"
+                        onPointerDown={(event) => startDrag(event, "top_crop", "resize")}
+                      />
+                    </div>
+
+                    <div
+                      className="pointer-events-auto absolute border-2 border-cyan-400 bg-cyan-500/20 shadow-[0_0_0_9999px_rgba(0,0,0,0.08)]"
+                      style={bottomPreviewStyle}
+                      onPointerDown={(event) => startDrag(event, "bottom_crop", "move")}
+                    >
+                      <div className="absolute left-2 top-2 rounded-md bg-cyan-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                        Bottom / gameplay
+                      </div>
+                      <div
+                        className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize rounded-tl-md bg-cyan-400"
+                        onPointerDown={(event) => startDrag(event, "bottom_crop", "resize")}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 overflow-auto">
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                  <h3 className="text-sm font-semibold text-zinc-100">
+                    Stack split
+                  </h3>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Controls the fixed 1080×1920 output split between the top and bottom stacked regions.
+                  </p>
+
+                  <div className="mt-4">
+                    <input
+                      type="range"
+                      min={20}
+                      max={80}
+                      step={1}
+                      value={Math.round(cropDraft.split_ratio_top * 100)}
+                      onChange={(event) =>
+                        updateSplitRatio(Number(event.target.value) / 100)
+                      }
+                      className="w-full"
+                    />
+                    <div className="mt-2 flex items-center justify-between text-sm text-zinc-300">
+                      <span>Top: {Math.round(cropDraft.split_ratio_top * 100)}%</span>
+                      <span>
+                        Bottom: {100 - Math.round(cropDraft.split_ratio_top * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                  <h3 className="text-sm font-semibold text-zinc-100">Top crop</h3>
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">x</p>
+                      <p className="mt-1 text-zinc-100">{cropDraft.top_crop.x}</p>
+                    </div>
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">y</p>
+                      <p className="mt-1 text-zinc-100">{cropDraft.top_crop.y}</p>
+                    </div>
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">w</p>
+                      <p className="mt-1 text-zinc-100">{cropDraft.top_crop.w}</p>
+                    </div>
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">h</p>
+                      <p className="mt-1 text-zinc-100">{cropDraft.top_crop.h}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                  <h3 className="text-sm font-semibold text-zinc-100">Bottom crop</h3>
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">x</p>
+                      <p className="mt-1 text-zinc-100">{cropDraft.bottom_crop.x}</p>
+                    </div>
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">y</p>
+                      <p className="mt-1 text-zinc-100">{cropDraft.bottom_crop.y}</p>
+                    </div>
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">w</p>
+                      <p className="mt-1 text-zinc-100">{cropDraft.bottom_crop.w}</p>
+                    </div>
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">h</p>
+                      <p className="mt-1 text-zinc-100">{cropDraft.bottom_crop.h}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 text-xs leading-6 text-zinc-400">
+                  Purple crop fills the top stacked region.
+                  <br />
+                  Cyan crop fills the bottom stacked region.
+                  <br />
+                  Each crop is scaled to fit its destination while preserving aspect ratio.
+                  <br />
+                  No stretching is applied.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
