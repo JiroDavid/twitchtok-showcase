@@ -1,6 +1,6 @@
 from typing import Literal, Optional
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class ClipDownloadJobRequest(BaseModel):
@@ -17,6 +17,7 @@ class CropBox(BaseModel):
 class StackedConfig(BaseModel):
     top_crop: CropBox
     bottom_crop: CropBox
+    split_ratio_top: float = Field(default=0.4, ge=0.2, le=0.8)
 
 
 class VideoProcessJobRequest(BaseModel):

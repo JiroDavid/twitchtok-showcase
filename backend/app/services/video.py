@@ -8,6 +8,13 @@ OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
 FFMPEG_TIMEOUT_SECONDS = 180
 
+OUTPUT_WIDTH = 1080
+OUTPUT_HEIGHT = 1920
+
+
+def _clamp_split_ratio(value: float, minimum: float = 0.2, maximum: float = 0.8) -> float:
+    return max(minimum, min(maximum, value))
+
 
 def process_video_to_vertical(
     input_path: str,
@@ -25,7 +32,7 @@ def process_video_to_vertical(
     if layout == "cropped":
         vf = (
             "crop=in_h*9/16:in_h:(in_w-in_h*9/16)/2:0,"
-            "scale=1080:1920"
+            f"scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}"
         )
 
         command = [
@@ -50,9 +57,9 @@ def process_video_to_vertical(
 
     elif layout == "fullscreen":
         filter_complex = (
-            "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,"
-            "crop=1080:1920,boxblur=20:10[bg];"
-            "[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[fg];"
+            f"[0:v]scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:force_original_aspect_ratio=increase,"
+            f"crop={OUTPUT_WIDTH}:{OUTPUT_HEIGHT},boxblur=20:10[bg];"
+            f"[0:v]scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:force_original_aspect_ratio=decrease[fg];"
             "[bg][fg]overlay=(W-w)/2:(H-h)/2"
         )
 
@@ -78,24 +85,36 @@ def process_video_to_vertical(
 
     elif layout == "stacked":
         if stacked_config:
+            split_ratio_top = _clamp_split_ratio(
+                float(stacked_config.get("split_ratio_top", 0.4))
+            )
+        else:
+            split_ratio_top = 0.4
+
+        top_height = int(round(OUTPUT_HEIGHT * split_ratio_top))
+        bottom_height = OUTPUT_HEIGHT - top_height
+
+        if stacked_config:
             top = stacked_config["top_crop"]
             bottom = stacked_config["bottom_crop"]
 
             filter_complex = (
                 f"[0:v]crop={top['w']}:{top['h']}:{top['x']}:{top['y']},"
-                "scale=1080:672:force_original_aspect_ratio=decrease,"
-                "pad=1080:672:(ow-iw)/2:(oh-ih)/2[top];"
+                f"scale={OUTPUT_WIDTH}:{top_height}:force_original_aspect_ratio=decrease,"
+                f"pad={OUTPUT_WIDTH}:{top_height}:(ow-iw)/2:(oh-ih)/2[top];"
                 f"[0:v]crop={bottom['w']}:{bottom['h']}:{bottom['x']}:{bottom['y']},"
-                "scale=1080:1248:force_original_aspect_ratio=decrease,"
-                "pad=1080:1248:(ow-iw)/2:(oh-ih)/2[bottom];"
+                f"scale={OUTPUT_WIDTH}:{bottom_height}:force_original_aspect_ratio=decrease,"
+                f"pad={OUTPUT_WIDTH}:{bottom_height}:(ow-iw)/2:(oh-ih)/2[bottom];"
                 "[top][bottom]vstack=inputs=2[outv]"
             )
         else:
             filter_complex = (
                 "[0:v]crop=in_w*0.4:in_h*0.4:in_w*0.55:in_h*0.05,"
-                "scale=1080:672[top];"
+                f"scale={OUTPUT_WIDTH}:{top_height}:force_original_aspect_ratio=decrease,"
+                f"pad={OUTPUT_WIDTH}:{top_height}:(ow-iw)/2:(oh-ih)/2[top];"
                 "[0:v]crop=in_h*9/16:in_h:(in_w-in_h*9/16)/2:0,"
-                "scale=1080:1248[bottom];"
+                f"scale={OUTPUT_WIDTH}:{bottom_height}:force_original_aspect_ratio=decrease,"
+                f"pad={OUTPUT_WIDTH}:{bottom_height}:(ow-iw)/2:(oh-ih)/2[bottom];"
                 "[top][bottom]vstack=inputs=2[outv]"
             )
 
