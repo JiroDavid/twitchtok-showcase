@@ -16,6 +16,26 @@ def _clamp_split_ratio(value: float, minimum: float = 0.2, maximum: float = 0.8)
     return max(minimum, min(maximum, value))
 
 
+def _build_cover_crop_filter(
+    crop_box: dict,
+    target_width: int,
+    target_height: int,
+) -> str:
+    """
+    Build an FFmpeg filter chain that:
+    1. crops the selected source region
+    2. scales it to cover the destination area while preserving aspect ratio
+    3. crops the overflow to the exact destination size
+
+    This removes black bars while avoiding stretching.
+    """
+    return (
+        f"crop={crop_box['w']}:{crop_box['h']}:{crop_box['x']}:{crop_box['y']},"
+        f"scale={target_width}:{target_height}:force_original_aspect_ratio=increase,"
+        f"crop={target_width}:{target_height}"
+    )
+
+
 def process_video_to_vertical(
     input_path: str,
     output_filename: str,
@@ -98,23 +118,37 @@ def process_video_to_vertical(
             top = stacked_config["top_crop"]
             bottom = stacked_config["bottom_crop"]
 
+            top_filter = _build_cover_crop_filter(
+                crop_box=top,
+                target_width=OUTPUT_WIDTH,
+                target_height=top_height,
+            )
+            bottom_filter = _build_cover_crop_filter(
+                crop_box=bottom,
+                target_width=OUTPUT_WIDTH,
+                target_height=bottom_height,
+            )
+
             filter_complex = (
-                f"[0:v]crop={top['w']}:{top['h']}:{top['x']}:{top['y']},"
-                f"scale={OUTPUT_WIDTH}:{top_height}:force_original_aspect_ratio=decrease,"
-                f"pad={OUTPUT_WIDTH}:{top_height}:(ow-iw)/2:(oh-ih)/2[top];"
-                f"[0:v]crop={bottom['w']}:{bottom['h']}:{bottom['x']}:{bottom['y']},"
-                f"scale={OUTPUT_WIDTH}:{bottom_height}:force_original_aspect_ratio=decrease,"
-                f"pad={OUTPUT_WIDTH}:{bottom_height}:(ow-iw)/2:(oh-ih)/2[bottom];"
+                f"[0:v]{top_filter}[top];"
+                f"[0:v]{bottom_filter}[bottom];"
                 "[top][bottom]vstack=inputs=2[outv]"
             )
         else:
-            filter_complex = (
-                "[0:v]crop=in_w*0.4:in_h*0.4:in_w*0.55:in_h*0.05,"
-                f"scale={OUTPUT_WIDTH}:{top_height}:force_original_aspect_ratio=decrease,"
-                f"pad={OUTPUT_WIDTH}:{top_height}:(ow-iw)/2:(oh-ih)/2[top];"
+            default_top_filter = (
+                "crop=in_w*0.4:in_h*0.4:in_w*0.55:in_h*0.05,"
+                f"scale={OUTPUT_WIDTH}:{top_height}:force_original_aspect_ratio=increase,"
+                f"crop={OUTPUT_WIDTH}:{top_height}"
+            )
+            default_bottom_filter = (
                 "[0:v]crop=in_h*9/16:in_h:(in_w-in_h*9/16)/2:0,"
-                f"scale={OUTPUT_WIDTH}:{bottom_height}:force_original_aspect_ratio=decrease,"
-                f"pad={OUTPUT_WIDTH}:{bottom_height}:(ow-iw)/2:(oh-ih)/2[bottom];"
+                f"scale={OUTPUT_WIDTH}:{bottom_height}:force_original_aspect_ratio=increase,"
+                f"crop={OUTPUT_WIDTH}:{bottom_height}"
+            )
+
+            filter_complex = (
+                f"[0:v]{default_top_filter}[top];"
+                f"{default_bottom_filter}[bottom];"
                 "[top][bottom]vstack=inputs=2[outv]"
             )
 
