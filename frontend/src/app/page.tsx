@@ -4,9 +4,23 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type LayoutOption = "cropped" | "fullscreen" | "stacked";
 
-type JobResponse = {
+type JobCreateResponse = {
   job_id: string;
   status: string;
+};
+
+type DownloadJobResult = {
+  clip_slug?: string;
+  download_path?: string;
+  filename?: string;
+  source_type?: string;
+};
+
+type ProcessJobResult = {
+  output_path?: string;
+  filename?: string;
+  layout?: string;
+  output_url?: string;
 };
 
 type JobStatusResponse = {
@@ -14,62 +28,71 @@ type JobStatusResponse = {
   type: string;
   status: string;
   payload: Record<string, unknown>;
-  result: {
-    output_path?: string;
-    filename?: string;
-    layout?: string;
-    output_url?: string;
-  } | null;
+  result: DownloadJobResult | ProcessJobResult | null;
   error: string | null;
 };
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 export default function Home() {
-  const [inputPath, setInputPath] = useState(
-    "storage/downloads/AuspiciousAnimatedDelicataSoonerLater-0B3bBhlmYjXEWKEs.mp4"
+  const [clipUrl, setClipUrl] = useState(
+    "https://clips.twitch.tv/AuspiciousAnimatedDelicataSoonerLater-0B3bBhlmYjXEWKEs"
   );
   const [layout, setLayout] = useState<LayoutOption>("cropped");
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [jobStatus, setJobStatus] = useState<JobStatusResponse | null>(null);
+
+  const [downloadJobId, setDownloadJobId] = useState<string | null>(null);
+  const [downloadJobStatus, setDownloadJobStatus] =
+    useState<JobStatusResponse | null>(null);
+
+  const [downloadedPath, setDownloadedPath] = useState<string | null>(null);
+
+  const [processJobId, setProcessJobId] = useState<string | null>(null);
+  const [processJobStatus, setProcessJobStatus] =
+    useState<JobStatusResponse | null>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
 
   const outputVideoUrl = useMemo(() => {
-    const outputUrl = jobStatus?.result?.output_url;
+    const result = processJobStatus?.result as ProcessJobResult | null;
+    const outputUrl = result?.output_url;
     if (!outputUrl) return null;
     return `${API_BASE_URL}${outputUrl}`;
-  }, [jobStatus]);
+  }, [processJobStatus]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setIsSubmitting(true);
     setRequestError(null);
-    setJobId(null);
-    setJobStatus(null);
+
+    setDownloadJobId(null);
+    setDownloadJobStatus(null);
+    setDownloadedPath(null);
+
+    setProcessJobId(null);
+    setProcessJobStatus(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/jobs/process-video`, {
+      const response = await fetch(`${API_BASE_URL}/jobs/download-clip`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          input_path: inputPath,
-          layout,
+          clip_url: clipUrl,
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Failed to create job (${response.status}): ${errorText}`
+          `Failed to create download job (${response.status}): ${errorText}`
         );
       }
 
-      const data: JobResponse = await response.json();
-      setJobId(data.job_id);
+      const data: JobCreateResponse = await response.json();
+      setDownloadJobId(data.job_id);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unknown request error";
@@ -80,40 +103,139 @@ export default function Home() {
   }
 
   useEffect(() => {
-    if (!jobId) return;
+    if (!downloadJobId) return;
 
-    let intervalId: NodeJS.Timeout;
+    let intervalId: ReturnType<typeof setInterval>;
 
-    async function fetchJobStatus() {
+    async function fetchDownloadJobStatus() {
       try {
-        const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`);
+        const response = await fetch(`${API_BASE_URL}/jobs/${downloadJobId}`);
 
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(
-            `Failed to fetch job status (${response.status}): ${errorText}`
+            `Failed to fetch download job status (${response.status}): ${errorText}`
           );
         }
 
         const data: JobStatusResponse = await response.json();
-        setJobStatus(data);
+        setDownloadJobStatus(data);
+
+        if (data.status === "completed") {
+          const result = data.result as DownloadJobResult | null;
+          const path = result?.download_path;
+
+          if (!path) {
+            setRequestError(
+              "Download job completed but no download_path was returned."
+            );
+            clearInterval(intervalId);
+            return;
+          }
+
+          setDownloadedPath(path);
+          clearInterval(intervalId);
+        }
+
+        if (data.status === "failed") {
+          clearInterval(intervalId);
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unknown download polling error";
+        setRequestError(message);
+        clearInterval(intervalId);
+      }
+    }
+
+    fetchDownloadJobStatus();
+    intervalId = setInterval(fetchDownloadJobStatus, 2000);
+
+    return () => clearInterval(intervalId);
+  }, [downloadJobId]);
+
+  useEffect(() => {
+    if (!downloadedPath) return;
+    if (processJobId) return;
+
+    async function startProcessJob() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/jobs/process-video`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            input_path: downloadedPath,
+            layout,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `Failed to create process job (${response.status}): ${errorText}`
+          );
+        }
+
+        const data: JobCreateResponse = await response.json();
+        setProcessJobId(data.job_id);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unknown process request error";
+        setRequestError(message);
+      }
+    }
+
+    startProcessJob();
+  }, [downloadedPath, layout, processJobId]);
+
+  useEffect(() => {
+    if (!processJobId) return;
+
+    let intervalId: ReturnType<typeof setInterval>;
+
+    async function fetchProcessJobStatus() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/jobs/${processJobId}`);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `Failed to fetch process job status (${response.status}): ${errorText}`
+          );
+        }
+
+        const data: JobStatusResponse = await response.json();
+        setProcessJobStatus(data);
 
         if (data.status === "completed" || data.status === "failed") {
           clearInterval(intervalId);
         }
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Unknown polling error";
+          error instanceof Error
+            ? error.message
+            : "Unknown process polling error";
         setRequestError(message);
         clearInterval(intervalId);
       }
     }
 
-    fetchJobStatus();
-    intervalId = setInterval(fetchJobStatus, 2000);
+    fetchProcessJobStatus();
+    intervalId = setInterval(fetchProcessJobStatus, 2000);
 
     return () => clearInterval(intervalId);
-  }, [jobId]);
+  }, [processJobId]);
+
+  const overallStatus =
+    processJobStatus?.status ??
+    downloadJobStatus?.status ??
+    (isSubmitting ? "submitting" : "idle");
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -126,35 +248,34 @@ export default function Home() {
             AI-Assisted Twitch Clip Editing
           </h1>
           <p className="mt-4 max-w-3xl text-base text-zinc-400 sm:text-lg">
-            Test the backend render pipeline from the frontend by submitting a
-            local clip path, choosing a vertical layout, polling the job status,
-            and previewing the processed result.
+            Paste a Twitch clip URL, let the backend download it, process it
+            into a vertical layout, and preview the rendered result.
           </p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-            <h2 className="text-xl font-semibold">Process Video</h2>
+            <h2 className="text-xl font-semibold">Twitch Clip Processing</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
-              Use a backend storage path for now. This is a temporary testing
-              flow before clip selection and manual crop UI.
+              This is the next step after manual file-path testing. Twitch OAuth
+              and clip browsing will come after this flow works cleanly.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-5">
               <div>
                 <label
-                  htmlFor="inputPath"
+                  htmlFor="clipUrl"
                   className="mb-2 block text-sm font-medium text-zinc-200"
                 >
-                  Input video path
+                  Twitch clip URL
                 </label>
                 <input
-                  id="inputPath"
+                  id="clipUrl"
                   type="text"
-                  value={inputPath}
-                  onChange={(event) => setInputPath(event.target.value)}
+                  value={clipUrl}
+                  onChange={(event) => setClipUrl(event.target.value)}
                   className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
-                  placeholder="storage/downloads/example.mp4"
+                  placeholder="https://clips.twitch.tv/YourClipSlug"
                 />
               </div>
 
@@ -184,29 +305,51 @@ export default function Home() {
                 disabled={isSubmitting}
                 className="w-full rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting ? "Submitting..." : "Process Video"}
+                {isSubmitting ? "Submitting..." : "Download and Process"}
               </button>
             </form>
 
             <div className="mt-6 space-y-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm">
               <div>
-                <span className="text-zinc-500">Job ID:</span>{" "}
-                <span className="break-all text-zinc-200">
-                  {jobId ?? "No job submitted yet"}
-                </span>
+                <span className="text-zinc-500">Overall status:</span>{" "}
+                <span className="text-zinc-200">{overallStatus}</span>
               </div>
+
               <div>
-                <span className="text-zinc-500">Status:</span>{" "}
-                <span className="text-zinc-200">
-                  {jobStatus?.status ?? "idle"}
+                <span className="text-zinc-500">Download job ID:</span>{" "}
+                <span className="break-all text-zinc-200">
+                  {downloadJobId ?? "Not started"}
                 </span>
               </div>
-              {jobStatus?.error && (
+
+              <div>
+                <span className="text-zinc-500">Downloaded path:</span>{" "}
+                <span className="break-all text-zinc-200">
+                  {downloadedPath ?? "Not available yet"}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-zinc-500">Process job ID:</span>{" "}
+                <span className="break-all text-zinc-200">
+                  {processJobId ?? "Not started"}
+                </span>
+              </div>
+
+              {downloadJobStatus?.error && (
                 <div className="text-red-400">
-                  <span className="font-medium">Job error:</span>{" "}
-                  {jobStatus.error}
+                  <span className="font-medium">Download error:</span>{" "}
+                  {downloadJobStatus.error}
                 </div>
               )}
+
+              {processJobStatus?.error && (
+                <div className="text-red-400">
+                  <span className="font-medium">Process error:</span>{" "}
+                  {processJobStatus.error}
+                </div>
+              )}
+
               {requestError && (
                 <div className="text-red-400">
                   <span className="font-medium">Request error:</span>{" "}
@@ -219,7 +362,8 @@ export default function Home() {
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
             <h2 className="text-xl font-semibold">Output Preview</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
-              Once processing completes, the rendered video will appear here.
+              Once the clip is downloaded and processed, the rendered video will
+              appear here.
             </p>
 
             <div className="mt-6 flex min-h-[640px] items-center justify-center rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 p-4">
@@ -232,24 +376,27 @@ export default function Home() {
                 />
               ) : (
                 <div className="text-center text-sm text-zinc-500">
-                  No processed video yet. Submit a job to preview the output.
+                  No processed video yet. Submit a Twitch clip URL to preview
+                  the output.
                 </div>
               )}
             </div>
 
-            {jobStatus?.result && (
+            {processJobStatus?.result && (
               <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
                 <p>
                   <span className="text-zinc-500">Filename:</span>{" "}
-                  {jobStatus.result.filename ?? "N/A"}
+                  {(processJobStatus.result as ProcessJobResult).filename ??
+                    "N/A"}
                 </p>
                 <p className="mt-2">
                   <span className="text-zinc-500">Layout:</span>{" "}
-                  {jobStatus.result.layout ?? "N/A"}
+                  {(processJobStatus.result as ProcessJobResult).layout ?? "N/A"}
                 </p>
                 <p className="mt-2 break-all">
                   <span className="text-zinc-500">Output URL:</span>{" "}
-                  {jobStatus.result.output_url ?? "N/A"}
+                  {(processJobStatus.result as ProcessJobResult).output_url ??
+                    "N/A"}
                 </p>
               </div>
             )}
