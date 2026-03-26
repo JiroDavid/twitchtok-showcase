@@ -44,7 +44,38 @@ type DownloadedClipsResponse = {
   count: number;
 };
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+type TwitchUser = {
+  id: string;
+  login: string;
+  display_name: string;
+  email?: string;
+  profile_image_url?: string;
+};
+
+type TwitchClip = {
+  id: string;
+  url: string;
+  embed_url?: string;
+  title?: string;
+  creator_name?: string;
+  thumbnail_url?: string;
+  view_count?: number;
+  created_at?: string;
+  duration?: number;
+  vod_offset?: number | null;
+};
+
+type OAuthPayload = {
+  message: string;
+  user: TwitchUser;
+  clips: TwitchClip[];
+  clip_count: number;
+  token_type?: string;
+  expires_in?: number;
+  scope?: string[];
+};
+
+const API_BASE_URL = "http://localhost:8000";
 
 export default function Home() {
   const [sourceMode, setSourceMode] = useState<SourceMode>("twitch_url");
@@ -69,6 +100,10 @@ export default function Home() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
+
+  const [twitchUser, setTwitchUser] = useState<TwitchUser | null>(null);
+  const [twitchClips, setTwitchClips] = useState<TwitchClip[]>([]);
+  const [oauthStatus, setOauthStatus] = useState<string | null>(null);
 
   const outputVideoUrl = useMemo(() => {
     const result = processJobStatus?.result as ProcessJobResult | null;
@@ -106,6 +141,41 @@ export default function Home() {
 
     fetchDownloadedClips();
   }, [selectedDownloadedPath]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauth = params.get("oauth");
+    const payloadParam = params.get("payload");
+    const errorMessage = params.get("message");
+
+    if (!oauth) return;
+
+    if (oauth === "success" && payloadParam) {
+      try {
+        const decodedPayload = decodeURIComponent(payloadParam);
+        const parsedPayload: OAuthPayload = JSON.parse(decodedPayload);
+
+        setTwitchUser(parsedPayload.user);
+        setTwitchClips(parsedPayload.clips ?? []);
+        setOauthStatus("success");
+
+        if ((parsedPayload.clips ?? []).length > 0) {
+          setSourceMode("twitch_url");
+        }
+      } catch (error) {
+        console.error("Failed to parse OAuth payload:", error);
+        setRequestError("OAuth succeeded, but the returned payload could not be read.");
+        setOauthStatus("error");
+      }
+    }
+
+    if (oauth === "error") {
+      setOauthStatus("error");
+      setRequestError(errorMessage ?? "Twitch OAuth failed.");
+    }
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -176,6 +246,22 @@ export default function Home() {
     }
   }
 
+  function handleLoginWithTwitch() {
+    window.location.href = `${API_BASE_URL}/auth/twitch/login`;
+  }
+
+  function handleUseClip(clip: TwitchClip) {
+    setSourceMode("twitch_url");
+    setClipUrl(clip.url);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleLogoutTwitch() {
+    setTwitchUser(null);
+    setTwitchClips([]);
+    setOauthStatus(null);
+  }
+
   useEffect(() => {
     if (!downloadJobId) return;
 
@@ -209,6 +295,7 @@ export default function Home() {
 
           setDownloadedPath(path);
           clearInterval(intervalId);
+          return;
         }
 
         if (data.status === "failed") {
@@ -313,18 +400,80 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-10">
-        <div className="mb-10">
-          <p className="mb-3 text-sm uppercase tracking-[0.2em] text-violet-400">
-            Dissertation Project
-          </p>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            AI-Assisted Twitch Clip Editing
-          </h1>
-          <p className="mt-4 max-w-3xl text-base text-zinc-400 sm:text-lg">
-            Process Twitch clips into vertical videos using either a pasted clip
-            URL or an already downloaded local test file.
-          </p>
+      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-10">
+        <div className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="mb-3 text-sm uppercase tracking-[0.2em] text-violet-400">
+              Dissertation Project
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              AI-Assisted Twitch Clip Editing
+            </h1>
+            <p className="mt-4 max-w-3xl text-base text-zinc-400 sm:text-lg">
+              Process Twitch clips into vertical videos using either a pasted clip
+              URL, your authenticated Twitch clips, or an already downloaded test file.
+            </p>
+          </div>
+
+          <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+            <h2 className="text-lg font-semibold">Twitch Account</h2>
+
+            {!twitchUser ? (
+              <>
+                <p className="mt-2 text-sm leading-6 text-zinc-400">
+                  Log in with Twitch to load your recent clips directly into the editor.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleLoginWithTwitch}
+                  className="mt-4 w-full rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-400"
+                >
+                  Login with Twitch
+                </button>
+              </>
+            ) : (
+              <div className="mt-4">
+                <div className="flex items-center gap-4">
+                  {twitchUser.profile_image_url ? (
+                    <img
+                      src={twitchUser.profile_image_url}
+                      alt={twitchUser.display_name}
+                      className="h-14 w-14 rounded-full border border-zinc-700 object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950 text-sm text-zinc-400">
+                      N/A
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="text-base font-semibold text-zinc-100">
+                      {twitchUser.display_name}
+                    </p>
+                    <p className="text-sm text-zinc-400">@{twitchUser.login}</p>
+                    {twitchUser.email && (
+                      <p className="text-xs text-zinc-500">{twitchUser.email}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm">
+                  <span className="text-zinc-400">OAuth status</span>
+                  <span className="font-medium text-green-400">
+                    {oauthStatus ?? "connected"}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleLogoutTwitch}
+                  className="mt-4 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-800"
+                >
+                  Clear Twitch Session
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
@@ -499,45 +648,125 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-            <h2 className="text-xl font-semibold">Output Preview</h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-400">
-              Once processing completes, the rendered video will appear here.
-            </p>
+          <section className="space-y-6">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+              <h2 className="text-xl font-semibold">Your Twitch Clips</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                After Twitch login, choose one of your clips and feed it into the
+                existing processing workflow.
+              </p>
 
-            <div className="mt-6 flex min-h-[640px] items-center justify-center rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 p-4">
-              {outputVideoUrl ? (
-                <video
-                  key={outputVideoUrl}
-                  controls
-                  className="max-h-[600px] rounded-xl border border-zinc-800"
-                  src={outputVideoUrl}
-                />
-              ) : (
-                <div className="text-center text-sm text-zinc-500">
-                  No processed video yet. Submit a job to preview the output.
+              <div className="mt-6">
+                {!twitchUser ? (
+                  <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 p-6 text-sm text-zinc-500">
+                    No Twitch account connected yet. Use the login button above to
+                    load recent clips.
+                  </div>
+                ) : twitchClips.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 p-6 text-sm text-zinc-500">
+                    Twitch login succeeded, but no clips were returned.
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {twitchClips.map((clip) => (
+                      <div
+                        key={clip.id}
+                        className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950"
+                      >
+                        {clip.thumbnail_url ? (
+                          <img
+                            src={clip.thumbnail_url}
+                            alt={clip.title ?? "Twitch clip thumbnail"}
+                            className="h-40 w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-40 items-center justify-center bg-zinc-900 text-sm text-zinc-500">
+                            No thumbnail
+                          </div>
+                        )}
+
+                        <div className="p-4">
+                          <h3 className="line-clamp-2 text-sm font-semibold text-zinc-100">
+                            {clip.title || "Untitled clip"}
+                          </h3>
+
+                          <div className="mt-3 space-y-1 text-xs text-zinc-400">
+                            <p>Creator: {clip.creator_name ?? "Unknown"}</p>
+                            <p>Views: {clip.view_count ?? 0}</p>
+                            <p>
+                              Created:{" "}
+                              {clip.created_at
+                                ? new Date(clip.created_at).toLocaleString()
+                                : "Unknown"}
+                            </p>
+                          </div>
+
+                          <div className="mt-4 flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleUseClip(clip)}
+                              className="flex-1 rounded-xl bg-violet-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-400"
+                            >
+                              Use this clip
+                            </button>
+
+                            <a
+                              href={clip.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-800"
+                            >
+                              Open
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+              <h2 className="text-xl font-semibold">Output Preview</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                Once processing completes, the rendered video will appear here.
+              </p>
+
+              <div className="mt-6 flex min-h-[640px] items-center justify-center rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 p-4">
+                {outputVideoUrl ? (
+                  <video
+                    key={outputVideoUrl}
+                    controls
+                    className="max-h-[600px] rounded-xl border border-zinc-800"
+                    src={outputVideoUrl}
+                  />
+                ) : (
+                  <div className="text-center text-sm text-zinc-500">
+                    No processed video yet. Submit a job to preview the output.
+                  </div>
+                )}
+              </div>
+
+              {processJobStatus?.result && (
+                <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
+                  <p>
+                    <span className="text-zinc-500">Filename:</span>{" "}
+                    {(processJobStatus.result as ProcessJobResult).filename ??
+                      "N/A"}
+                  </p>
+                  <p className="mt-2">
+                    <span className="text-zinc-500">Layout:</span>{" "}
+                    {(processJobStatus.result as ProcessJobResult).layout ?? "N/A"}
+                  </p>
+                  <p className="mt-2 break-all">
+                    <span className="text-zinc-500">Output URL:</span>{" "}
+                    {(processJobStatus.result as ProcessJobResult).output_url ??
+                      "N/A"}
+                  </p>
                 </div>
               )}
             </div>
-
-            {processJobStatus?.result && (
-              <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
-                <p>
-                  <span className="text-zinc-500">Filename:</span>{" "}
-                  {(processJobStatus.result as ProcessJobResult).filename ??
-                    "N/A"}
-                </p>
-                <p className="mt-2">
-                  <span className="text-zinc-500">Layout:</span>{" "}
-                  {(processJobStatus.result as ProcessJobResult).layout ?? "N/A"}
-                </p>
-                <p className="mt-2 break-all">
-                  <span className="text-zinc-500">Output URL:</span>{" "}
-                  {(processJobStatus.result as ProcessJobResult).output_url ??
-                    "N/A"}
-                </p>
-              </div>
-            )}
           </section>
         </div>
       </div>
