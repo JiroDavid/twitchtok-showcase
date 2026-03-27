@@ -46,6 +46,18 @@ const DEFAULT_STACKED_CONFIG: StackedConfig = {
   split_ratio_top: 0.4,
 };
 
+const SOURCE_MODE_LABELS: Record<SourceMode, string> = {
+  twitch_clips: "Twitch Clips",
+  twitch_url: "Twitch Clip URL",
+  downloaded_file: "Downloaded File",
+};
+
+const LAYOUT_LABELS: Record<LayoutOption, string> = {
+  cropped: "Cropped",
+  fullscreen: "Fullscreen",
+  stacked: "Stacked",
+};
+
 export default function Home() {
   const [sourceMode, setSourceMode] = useState<SourceMode>("twitch_url");
   const [clipUrl, setClipUrl] = useState(
@@ -87,6 +99,8 @@ export default function Home() {
     useState<string | null>(null);
   const [pendingCropProcessPath, setPendingCropProcessPath] =
     useState<string | null>(null);
+  const [cropEditorRequiresConfirmation, setCropEditorRequiresConfirmation] =
+    useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
@@ -451,6 +465,7 @@ export default function Home() {
 
     setCropEditorPreviewUrlOverride(previewUrl ?? null);
     setPendingCropProcessPath(processPathAfterSave ?? null);
+    setCropEditorRequiresConfirmation(Boolean(processPathAfterSave));
     setIsCropEditorOpen(true);
   }
 
@@ -459,8 +474,16 @@ export default function Home() {
     setDragState(null);
     setCropEditorPreviewUrlOverride(null);
     setPendingCropProcessPath(null);
-    setPipelineStage("idle");
-    setPipelineMessage("Crop editor closed. Submit again when ready.");
+    if (cropEditorRequiresConfirmation) {
+      setPipelineStage("awaiting_crop");
+      setPipelineMessage(
+        "Crop confirmation still required before render can continue."
+      );
+    } else {
+      setPipelineStage("idle");
+      setPipelineMessage("Crop editor closed. Submit again when ready.");
+    }
+    setCropEditorRequiresConfirmation(false);
   }
 
   function saveCropEditor() {
@@ -473,6 +496,7 @@ export default function Home() {
     setIsCropEditorOpen(false);
     setDragState(null);
     setCropEditorPreviewUrlOverride(null);
+    setCropEditorRequiresConfirmation(false);
 
     if (pendingCropProcessPath) {
       setPipelineStage("processing");
@@ -747,6 +771,13 @@ export default function Home() {
       ? "text-amber-400"
       : "text-zinc-300";
 
+  const selectedItemLabel =
+    sourceMode === "twitch_clips"
+      ? selectedTwitchClip?.title || "No clip selected"
+      : sourceMode === "twitch_url"
+      ? clipUrl || "No URL entered"
+      : selectedDownloadedClip?.filename || "No file selected";
+
   const topPreviewStyle = {
     left: `${(cropDraft.top_crop.x / videoNaturalSize.width) * videoDisplaySize.width}px`,
     top: `${(cropDraft.top_crop.y / videoNaturalSize.height) * videoDisplaySize.height}px`,
@@ -827,6 +858,46 @@ export default function Home() {
           </aside>
 
           <section className="space-y-6">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Workspace Summary</h2>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Current editor context for the active source and output setup.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">
+                    Active Source
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-zinc-100">
+                    {SOURCE_MODE_LABELS[sourceMode] ?? sourceMode}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">
+                    Layout
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-zinc-100">
+                    {LAYOUT_LABELS[layout] ?? layout}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">
+                    Selected Item
+                  </p>
+                  <p className="mt-1 break-all text-sm font-semibold text-zinc-100">
+                    {selectedItemLabel}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {sourceMode === "twitch_clips" ? (
               <TwitchClipsPanel
                 selectedTwitchClip={selectedTwitchClip}
