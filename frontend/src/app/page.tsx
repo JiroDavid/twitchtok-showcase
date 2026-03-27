@@ -100,6 +100,16 @@ type DragState = {
   startBox: CropBox;
 } | null;
 
+type PipelineStage =
+  | "idle"
+  | "submitting"
+  | "downloading"
+  | "download_complete"
+  | "awaiting_crop"
+  | "processing"
+  | "completed"
+  | "failed";
+
 const API_BASE_URL = "http://localhost:8000";
 
 const DEFAULT_STACKED_CONFIG: StackedConfig = {
@@ -147,6 +157,8 @@ export default function Home() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [pipelineStage, setPipelineStage] = useState<PipelineStage>("idle");
+  const [pipelineMessage, setPipelineMessage] = useState<string>("Ready.");
 
   const [twitchUser, setTwitchUser] = useState<TwitchUser | null>(null);
   const [twitchClips, setTwitchClips] = useState<TwitchClip[]>([]);
@@ -167,6 +179,8 @@ export default function Home() {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
+  const submittedLayoutRef = useRef<LayoutOption>(layout);
+  const submittedSourceModeRef = useRef<SourceMode>(sourceMode);
 
   const outputVideoUrl = useMemo(() => {
     const result = processJobStatus?.result as ProcessJobResult | null;
@@ -307,8 +321,7 @@ export default function Home() {
       const deltaY = (event.clientY - dragState.startClientY) * scaleY;
 
       setCropDraft((current) => {
-        const box = current[dragState.target];
-        let nextBox: CropBox = { ...dragState.startBox };
+        const nextBox: CropBox = { ...dragState.startBox };
 
         if (dragState.mode === "move") {
           nextBox.x = clamp(
@@ -360,6 +373,10 @@ export default function Home() {
 
     setIsSubmitting(true);
     setRequestError(null);
+    setPipelineStage("submitting");
+    setPipelineMessage("Submitting request...");
+    submittedLayoutRef.current = layout;
+    submittedSourceModeRef.current = sourceMode;
 
     setDownloadJobId(null);
     setDownloadJobStatus(null);
@@ -371,6 +388,8 @@ export default function Home() {
     setCropEditorPreviewUrlOverride(null);
     setPendingCropProcessPath(null);
     setIsCropEditorOpen(false);
+    setPipelineStage("submitting");
+    setPipelineMessage("Preparing pipeline...");
 
     try {
       if (layout === "stacked" && !stackedConfigIsValid) {
@@ -399,6 +418,8 @@ export default function Home() {
 
         const data: JobCreateResponse = await response.json();
         setDownloadJobId(data.job_id);
+        setPipelineStage("downloading");
+        setPipelineMessage("Downloading Twitch clip...");
       } else if (sourceMode === "twitch_clips") {
         if (!selectedTwitchClip?.url) {
           throw new Error("Please select a Twitch clip first.");
@@ -423,6 +444,8 @@ export default function Home() {
 
         const data: JobCreateResponse = await response.json();
         setDownloadJobId(data.job_id);
+        setPipelineStage("downloading");
+        setPipelineMessage("Downloading selected Twitch clip...");
       } else {
         if (!selectedDownloadedPath) {
           throw new Error("Please select a downloaded file.");
@@ -445,11 +468,15 @@ export default function Home() {
 
         const data: JobCreateResponse = await response.json();
         setProcessJobId(data.job_id);
+        setPipelineStage("processing");
+        setPipelineMessage("Processing downloaded file...");
       }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unknown request error";
       setRequestError(message);
+      setPipelineStage("failed");
+      setPipelineMessage("Pipeline failed before processing could start.");
     } finally {
       setIsSubmitting(false);
     }
@@ -508,6 +535,8 @@ export default function Home() {
     setDragState(null);
     setCropEditorPreviewUrlOverride(null);
     setPendingCropProcessPath(null);
+    setPipelineStage("idle");
+    setPipelineMessage("Crop editor closed. Submit again when ready.");
   }
 
   function saveCropEditor() {
@@ -522,9 +551,15 @@ export default function Home() {
     setCropEditorPreviewUrlOverride(null);
 
     if (pendingCropProcessPath) {
+      setPipelineStage("processing");
+      setPipelineMessage("Crop confirmed — starting stacked render...");
       setDownloadedPath(pendingCropProcessPath);
       setPendingCropProcessPath(null);
+      return;
     }
+
+    setPipelineStage("idle");
+    setPipelineMessage("Crop updated.");
   }
 
   function startDrag(
@@ -554,8 +589,6 @@ export default function Home() {
   useEffect(() => {
     if (!downloadJobId) return;
 
-    let intervalId: ReturnType<typeof setInterval>;
-
     async function fetchDownloadJobStatus() {
       try {
         const response = await fetch(`${API_BASE_URL}/jobs/${downloadJobId}`);
@@ -569,6 +602,16 @@ export default function Home() {
 
         const data: JobStatusResponse = await response.json();
         setDownloadJobStatus(data);
+
+        if (data.status === "queued") {
+          setPipelineStage("downloading");
+          setPipelineMessage("Download job queued...");
+        }
+
+        if (data.status === "processing") {
+          setPipelineStage("downloading");
+          setPipelineMessage("Downloading Twitch clip...");
+        }
 
         if (data.status === "completed") {
           const result = data.result as DownloadJobResult | null;
@@ -584,6 +627,8 @@ export default function Home() {
           }
 
           await fetchDownloadedClips(path);
+          setPipelineStage("download_complete");
+          setPipelineMessage("Download complete.");
 
           const previewUrl =
             result?.download_url
@@ -592,20 +637,35 @@ export default function Home() {
               ? `${API_BASE_URL}/storage/downloads/${encodeURIComponent(filename)}`
               : null;
 
-          if (layout === "stacked" && sourceMode !== "downloaded_file") {
+          const submittedLayout = submittedLayoutRef.current;
+          const submittedSourceMode = submittedSourceModeRef.current;
+
+          if (
+            submittedLayout === "stacked" &&
+            submittedSourceMode !== "downloaded_file"
+          ) {
             setSelectedDownloadedPath(path);
+            setPipelineStage("awaiting_crop");
+            setPipelineMessage("Download complete — waiting for crop confirmation.");
             openCropEditor(previewUrl ?? undefined, path);
             clearInterval(intervalId);
+            setDownloadJobId(null);
             return;
           }
 
+          setPipelineStage("processing");
+          setPipelineMessage("Download complete — starting render...");
           setDownloadedPath(path);
           clearInterval(intervalId);
+          setDownloadJobId(null);
           return;
         }
 
         if (data.status === "failed") {
+          setPipelineStage("failed");
+          setPipelineMessage("Clip download failed.");
           clearInterval(intervalId);
+          setDownloadJobId(null);
         }
       } catch (error) {
         const message =
@@ -613,17 +673,19 @@ export default function Home() {
             ? error.message
             : "Unknown download polling error";
         setRequestError(message);
+        setPipelineStage("failed");
+        setPipelineMessage("Download polling failed.");
         clearInterval(intervalId);
       }
     }
 
-    void fetchDownloadJobStatus();
-    intervalId = setInterval(() => {
+    const intervalId = setInterval(() => {
       void fetchDownloadJobStatus();
     }, 2000);
+    void fetchDownloadJobStatus();
 
     return () => clearInterval(intervalId);
-  }, [downloadJobId, layout, sourceMode]);
+  }, [downloadJobId]);
 
   useEffect(() => {
     if (!downloadedPath) return;
@@ -665,8 +727,6 @@ export default function Home() {
   useEffect(() => {
     if (!processJobId) return;
 
-    let intervalId: ReturnType<typeof setInterval>;
-
     async function fetchProcessJobStatus() {
       try {
         const response = await fetch(`${API_BASE_URL}/jobs/${processJobId}`);
@@ -681,7 +741,25 @@ export default function Home() {
         const data: JobStatusResponse = await response.json();
         setProcessJobStatus(data);
 
-        if (data.status === "completed" || data.status === "failed") {
+        if (data.status === "queued") {
+          setPipelineStage("processing");
+          setPipelineMessage("Render job queued...");
+        }
+
+        if (data.status === "processing") {
+          setPipelineStage("processing");
+          setPipelineMessage("Rendering vertical video...");
+        }
+
+        if (data.status === "completed") {
+          setPipelineStage("completed");
+          setPipelineMessage("Render complete.");
+          clearInterval(intervalId);
+        }
+
+        if (data.status === "failed") {
+          setPipelineStage("failed");
+          setPipelineMessage("Render failed.");
           clearInterval(intervalId);
         }
       } catch (error) {
@@ -690,24 +768,29 @@ export default function Home() {
             ? error.message
             : "Unknown process polling error";
         setRequestError(message);
+        setPipelineStage("failed");
+        setPipelineMessage("Process polling failed.");
         clearInterval(intervalId);
       }
     }
 
+    const intervalId = setInterval(fetchProcessJobStatus, 2000);
     fetchProcessJobStatus();
-    intervalId = setInterval(fetchProcessJobStatus, 2000);
 
     return () => clearInterval(intervalId);
   }, [processJobId]);
 
-  const overallStatus =
-    processJobStatus?.status ??
-    downloadJobStatus?.status ??
-    (isSubmitting ? "submitting" : "idle");
+  const overallStatus = pipelineStage;
 
   const submitButtonLabel =
-    isSubmitting
+    pipelineStage === "submitting"
       ? "Submitting..."
+      : pipelineStage === "downloading"
+      ? "Downloading..."
+      : pipelineStage === "awaiting_crop"
+      ? "Waiting for crop..."
+      : pipelineStage === "processing"
+      ? "Processing..."
       : sourceMode === "twitch_clips"
       ? "Download Selected Clip and Process"
       : sourceMode === "twitch_url"
@@ -719,7 +802,11 @@ export default function Home() {
       ? "text-green-400"
       : overallStatus === "failed"
       ? "text-red-400"
-      : overallStatus === "processing" || overallStatus === "queued"
+      : overallStatus === "submitting" ||
+        overallStatus === "downloading" ||
+        overallStatus === "download_complete" ||
+        overallStatus === "awaiting_crop" ||
+        overallStatus === "processing"
       ? "text-amber-400"
       : "text-zinc-300";
 
@@ -1050,9 +1137,8 @@ export default function Home() {
                         </button>
                       ) : (
                         <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-xs text-zinc-400">
-                          Visual crop preview currently works with locally downloaded video
-                          files. Use Downloaded File mode for the popup editor. We can add
-                          auto-download-then-open for Twitch clips next.
+                          Twitch clip and Twitch URL stacked flows now auto-open the crop editor
+                          after download. Downloaded File mode can still open the crop editor directly.
                         </div>
                       )}
 
@@ -1111,6 +1197,18 @@ export default function Home() {
                     Layout
                   </p>
                   <p className="mt-1 text-sm text-zinc-100">{layout}</p>
+                </div>
+
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">
+                    Pipeline stage
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-zinc-100">
+                    {pipelineStage}
+                  </p>
+                  <p className="mt-2 text-xs text-zinc-400">
+                    {pipelineMessage}
+                  </p>
                 </div>
 
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
