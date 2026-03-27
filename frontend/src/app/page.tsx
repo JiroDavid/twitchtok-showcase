@@ -28,6 +28,7 @@ type DownloadJobResult = {
   download_path?: string;
   filename?: string;
   source_type?: string;
+  download_url?: string;
 };
 
 type ProcessJobResult = {
@@ -159,6 +160,10 @@ export default function Home() {
   const [videoNaturalSize, setVideoNaturalSize] = useState({ width: 1920, height: 1080 });
   const [videoDisplaySize, setVideoDisplaySize] = useState({ width: 1, height: 1 });
   const [dragState, setDragState] = useState<DragState>(null);
+  const [cropEditorPreviewUrlOverride, setCropEditorPreviewUrlOverride] =
+    useState<string | null>(null);
+  const [pendingCropProcessPath, setPendingCropProcessPath] =
+    useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
@@ -177,9 +182,13 @@ export default function Home() {
   }, [downloadedClips, selectedDownloadedPath]);
 
   const cropEditorPreviewUrl = useMemo(() => {
+    if (cropEditorPreviewUrlOverride) {
+      return cropEditorPreviewUrlOverride;
+    }
+
     if (!selectedDownloadedClip) return null;
     return `${API_BASE_URL}${selectedDownloadedClip.url}`;
-  }, [selectedDownloadedClip]);
+  }, [cropEditorPreviewUrlOverride, selectedDownloadedClip]);
 
   const stackedConfigIsValid = [stackedConfig.top_crop, stackedConfig.bottom_crop].every(
     (box) =>
@@ -208,35 +217,46 @@ export default function Home() {
     };
   }
 
-  useEffect(() => {
-    async function fetchDownloadedClips() {
-      try {
-        const response = await fetch(`${API_BASE_URL}/clips/downloaded`);
+  async function fetchDownloadedClips(preferredPath?: string) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/clips/downloaded`);
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(
-            `Failed to fetch downloaded clips (${response.status}): ${errorText}`
-          );
-        }
-
-        const data: DownloadedClipsResponse = await response.json();
-        setDownloadedClips(data.clips);
-
-        if (data.clips.length > 0 && !selectedDownloadedPath) {
-          setSelectedDownloadedPath(data.clips[0].download_path);
-        }
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Unknown error fetching downloaded clips";
-        setRequestError(message);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to fetch downloaded clips (${response.status}): ${errorText}`
+        );
       }
-    }
 
-    fetchDownloadedClips();
-  }, [selectedDownloadedPath]);
+      const data: DownloadedClipsResponse = await response.json();
+      setDownloadedClips(data.clips);
+
+      if (preferredPath) {
+        const matchingClip = data.clips.find(
+          (clip) => clip.download_path === preferredPath
+        );
+
+        if (matchingClip) {
+          setSelectedDownloadedPath(matchingClip.download_path);
+          return;
+        }
+      }
+
+      if (data.clips.length > 0 && !selectedDownloadedPath) {
+        setSelectedDownloadedPath(data.clips[0].download_path);
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unknown error fetching downloaded clips";
+      setRequestError(message);
+    }
+  }
+
+  useEffect(() => {
+    void fetchDownloadedClips();
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -348,6 +368,10 @@ export default function Home() {
     setProcessJobId(null);
     setProcessJobStatus(null);
 
+    setCropEditorPreviewUrlOverride(null);
+    setPendingCropProcessPath(null);
+    setIsCropEditorOpen(false);
+
     try {
       if (layout === "stacked" && !stackedConfigIsValid) {
         throw new Error(
@@ -458,8 +482,10 @@ export default function Home() {
     }
   }
 
-  function openCropEditor() {
-    if (!cropEditorPreviewUrl) {
+  function openCropEditor(previewUrl?: string, processPathAfterSave?: string) {
+    const resolvedPreviewUrl = previewUrl ?? cropEditorPreviewUrl;
+
+    if (!resolvedPreviewUrl) {
       setRequestError(
         "Visual crop editor currently requires a locally downloaded video. Use Downloaded File mode."
       );
@@ -471,12 +497,17 @@ export default function Home() {
       bottom_crop: { ...stackedConfig.bottom_crop },
       split_ratio_top: stackedConfig.split_ratio_top,
     });
+
+    setCropEditorPreviewUrlOverride(previewUrl ?? null);
+    setPendingCropProcessPath(processPathAfterSave ?? null);
     setIsCropEditorOpen(true);
   }
 
   function closeCropEditor() {
     setIsCropEditorOpen(false);
     setDragState(null);
+    setCropEditorPreviewUrlOverride(null);
+    setPendingCropProcessPath(null);
   }
 
   function saveCropEditor() {
@@ -485,8 +516,15 @@ export default function Home() {
       bottom_crop: roundBox(cropDraft.bottom_crop),
       split_ratio_top: cropDraft.split_ratio_top,
     });
+
     setIsCropEditorOpen(false);
     setDragState(null);
+    setCropEditorPreviewUrlOverride(null);
+
+    if (pendingCropProcessPath) {
+      setDownloadedPath(pendingCropProcessPath);
+      setPendingCropProcessPath(null);
+    }
   }
 
   function startDrag(
@@ -535,11 +573,28 @@ export default function Home() {
         if (data.status === "completed") {
           const result = data.result as DownloadJobResult | null;
           const path = result?.download_path;
+          const filename = result?.filename;
 
           if (!path) {
             setRequestError(
               "Download job completed but no download_path was returned."
             );
+            clearInterval(intervalId);
+            return;
+          }
+
+          await fetchDownloadedClips(path);
+
+          const previewUrl =
+            result?.download_url
+              ? `${API_BASE_URL}${result.download_url}`
+              : filename
+              ? `${API_BASE_URL}/storage/downloads/${encodeURIComponent(filename)}`
+              : null;
+
+          if (layout === "stacked" && sourceMode !== "downloaded_file") {
+            setSelectedDownloadedPath(path);
+            openCropEditor(previewUrl ?? undefined, path);
             clearInterval(intervalId);
             return;
           }
@@ -562,11 +617,13 @@ export default function Home() {
       }
     }
 
-    fetchDownloadJobStatus();
-    intervalId = setInterval(fetchDownloadJobStatus, 2000);
+    void fetchDownloadJobStatus();
+    intervalId = setInterval(() => {
+      void fetchDownloadJobStatus();
+    }, 2000);
 
     return () => clearInterval(intervalId);
-  }, [downloadJobId]);
+  }, [downloadJobId, layout, sourceMode]);
 
   useEffect(() => {
     if (!downloadedPath) return;
@@ -985,7 +1042,7 @@ export default function Home() {
                       {sourceMode === "downloaded_file" ? (
                         <button
                           type="button"
-                          onClick={openCropEditor}
+                          onClick={() => openCropEditor()}
                           disabled={!selectedDownloadedPath}
                           className="rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-3 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
