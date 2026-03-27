@@ -7,6 +7,29 @@ import type {
   SourceMode,
 } from "../types";
 
+const SOURCE_MODE_LABELS: Record<SourceMode, string> = {
+  twitch_clips: "Twitch Clips",
+  twitch_url: "Twitch Clip URL",
+  downloaded_file: "Downloaded File",
+};
+
+const LAYOUT_LABELS: Record<LayoutOption, string> = {
+  cropped: "Cropped",
+  fullscreen: "Fullscreen",
+  stacked: "Stacked",
+};
+
+const PIPELINE_STAGE_LABELS: Record<PipelineStage, string> = {
+  idle: "Ready",
+  submitting: "Submitting",
+  downloading: "Downloading",
+  download_complete: "Download Complete",
+  awaiting_crop: "Awaiting Crop Confirmation",
+  processing: "Processing",
+  completed: "Completed",
+  failed: "Failed",
+};
+
 type JobActivityPanelProps = {
   downloadJobId: string | null;
   downloadJobStatus: JobStatusResponse | null;
@@ -34,6 +57,18 @@ export function JobActivityPanel({
   sourceMode,
   statusTone,
 }: JobActivityPanelProps) {
+  function getSourceModeLabel(value: SourceMode) {
+    return SOURCE_MODE_LABELS[value] ?? value;
+  }
+
+  function getLayoutLabel(value: LayoutOption) {
+    return LAYOUT_LABELS[value] ?? value;
+  }
+
+  function getPipelineStageLabel(value: PipelineStage) {
+    return PIPELINE_STAGE_LABELS[value] ?? value;
+  }
+
   return (
     <section className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
       <div className="flex items-center justify-between gap-4">
@@ -45,7 +80,7 @@ export function JobActivityPanel({
         </div>
 
         <span className={`text-sm font-semibold ${statusTone}`}>
-          {overallStatus}
+          {getPipelineStageLabel(overallStatus)}
         </span>
       </div>
 
@@ -54,14 +89,16 @@ export function JobActivityPanel({
           <p className="text-[11px] uppercase tracking-wide text-zinc-500">
             Selected source
           </p>
-          <p className="mt-1 text-sm text-zinc-100">{sourceMode}</p>
+          <p className="mt-1 text-sm text-zinc-100">
+            {getSourceModeLabel(sourceMode)}
+          </p>
         </div>
 
         <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
           <p className="text-[11px] uppercase tracking-wide text-zinc-500">
             Layout
           </p>
-          <p className="mt-1 text-sm text-zinc-100">{layout}</p>
+          <p className="mt-1 text-sm text-zinc-100">{getLayoutLabel(layout)}</p>
         </div>
 
         <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
@@ -69,7 +106,7 @@ export function JobActivityPanel({
             Pipeline stage
           </p>
           <p className="mt-1 text-sm font-semibold text-zinc-100">
-            {pipelineStage}
+            {getPipelineStageLabel(pipelineStage)}
           </p>
           <p className="mt-2 text-xs text-zinc-400">{pipelineMessage}</p>
         </div>

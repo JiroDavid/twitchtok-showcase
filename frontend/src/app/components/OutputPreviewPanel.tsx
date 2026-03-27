@@ -4,9 +4,27 @@ import type { RefObject } from "react";
 
 import type {
   JobStatusResponse,
+  LayoutOption,
   PipelineStage,
   ProcessJobResult,
 } from "../types";
+
+const LAYOUT_LABELS: Record<LayoutOption, string> = {
+  cropped: "Cropped",
+  fullscreen: "Fullscreen",
+  stacked: "Stacked",
+};
+
+const PIPELINE_STAGE_LABELS: Record<PipelineStage, string> = {
+  idle: "Ready",
+  submitting: "Submitting",
+  downloading: "Downloading",
+  download_complete: "Download Complete",
+  awaiting_crop: "Awaiting Crop Confirmation",
+  processing: "Processing",
+  completed: "Completed",
+  failed: "Failed",
+};
 
 type OutputPreviewPanelProps = {
   outputVideoUrl: string | null;
@@ -27,6 +45,15 @@ export function OutputPreviewPanel({
 }: OutputPreviewPanelProps) {
   const processResult = processJobStatus?.result as ProcessJobResult | null;
 
+  function getLayoutLabel(value: string | undefined) {
+    if (!value) return "N/A";
+    return LAYOUT_LABELS[value as LayoutOption] ?? value;
+  }
+
+  function getPipelineStageLabel(value: PipelineStage) {
+    return PIPELINE_STAGE_LABELS[value] ?? value;
+  }
+
   return (
     <div
       ref={sectionRef}
@@ -42,7 +69,7 @@ export function OutputPreviewPanel({
 
         {processResult ? (
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-300">
-            {processResult.layout ?? "N/A"} layout
+            {getLayoutLabel(processResult.layout)} layout
           </div>
         ) : null}
       </div>
@@ -54,7 +81,7 @@ export function OutputPreviewPanel({
               Pipeline status
             </p>
             <p className={`mt-1 text-sm font-semibold ${statusTone}`}>
-              {pipelineStage}
+              {getPipelineStageLabel(pipelineStage)}
             </p>
           </div>
 
@@ -92,7 +119,7 @@ export function OutputPreviewPanel({
             <p className="text-[11px] uppercase tracking-wide text-zinc-500">
               Layout
             </p>
-            <p className="mt-2">{processResult.layout ?? "N/A"}</p>
+            <p className="mt-2">{getLayoutLabel(processResult.layout)}</p>
           </div>
 
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
