@@ -1,114 +1,42 @@
 "use client";
 
-import { FormEvent, PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  PointerEvent as ReactPointerEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-type LayoutOption = "cropped" | "fullscreen" | "stacked";
-type SourceMode = "twitch_clips" | "twitch_url" | "downloaded_file";
-
-type CropBox = {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-};
-
-type StackedConfig = {
-  top_crop: CropBox;
-  bottom_crop: CropBox;
-  split_ratio_top: number;
-};
-
-type JobCreateResponse = {
-  job_id: string;
-  status: string;
-};
-
-type DownloadJobResult = {
-  clip_slug?: string;
-  download_path?: string;
-  filename?: string;
-  source_type?: string;
-  download_url?: string;
-};
-
-type ProcessJobResult = {
-  output_path?: string;
-  filename?: string;
-  layout?: string;
-  output_url?: string;
-};
-
-type JobStatusResponse = {
-  id: string;
-  type: string;
-  status: string;
-  payload: Record<string, unknown>;
-  result: DownloadJobResult | ProcessJobResult | null;
-  error: string | null;
-};
-
-type DownloadedClip = {
-  filename: string;
-  download_path: string;
-  url: string;
-};
-
-type DownloadedClipsResponse = {
-  clips: DownloadedClip[];
-  count: number;
-};
-
-type TwitchUser = {
-  id: string;
-  login: string;
-  display_name: string;
-  email?: string;
-  profile_image_url?: string;
-};
-
-type TwitchClip = {
-  id: string;
-  url: string;
-  embed_url?: string;
-  title?: string;
-  creator_name?: string;
-  thumbnail_url?: string;
-  view_count?: number;
-  created_at?: string;
-  duration?: number;
-  vod_offset?: number | null;
-};
-
-type OAuthPayload = {
-  message: string;
-  user: TwitchUser;
-  clips: TwitchClip[];
-  clip_count: number;
-  token_type?: string;
-  expires_in?: number;
-  scope?: string[];
-};
-
-type DragTarget = "top_crop" | "bottom_crop";
-type DragMode = "move" | "resize";
-
-type DragState = {
-  target: DragTarget;
-  mode: DragMode;
-  startClientX: number;
-  startClientY: number;
-  startBox: CropBox;
-} | null;
-
-type PipelineStage =
-  | "idle"
-  | "submitting"
-  | "downloading"
-  | "download_complete"
-  | "awaiting_crop"
-  | "processing"
-  | "completed"
-  | "failed";
+import { AccountPanel } from "./components/AccountPanel";
+import { CropEditorModal } from "./components/CropEditorModal";
+import { DownloadedFilesPanel } from "./components/DownloadedFilesPanel";
+import { EditorControlsPanel } from "./components/EditorControlsPanel";
+import { JobActivityPanel } from "./components/JobActivityPanel";
+import { OutputPreviewPanel } from "./components/OutputPreviewPanel";
+import { TwitchClipsPanel } from "./components/TwitchClipsPanel";
+import { TwitchUrlPanel } from "./components/TwitchUrlPanel";
+import type {
+  CropBox,
+  DownloadJobResult,
+  DownloadedClip,
+  DownloadedClipsResponse,
+  DragMode,
+  DragState,
+  DragTarget,
+  JobCreateResponse,
+  JobStatusResponse,
+  LayoutOption,
+  OAuthPayload,
+  PipelineStage,
+  ProcessJobResult,
+  SourceMode,
+  StackedConfig,
+  TwitchClip,
+  TwitchUser,
+} from "./types";
+import { clamp, roundBox } from "./utils";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -118,59 +46,42 @@ const DEFAULT_STACKED_CONFIG: StackedConfig = {
   split_ratio_top: 0.4,
 };
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function roundBox(box: CropBox): CropBox {
-  return {
-    x: Math.round(box.x),
-    y: Math.round(box.y),
-    w: Math.round(box.w),
-    h: Math.round(box.h),
-  };
-}
-
 export default function Home() {
   const [sourceMode, setSourceMode] = useState<SourceMode>("twitch_url");
-
   const [clipUrl, setClipUrl] = useState(
     "https://clips.twitch.tv/AuspiciousAnimatedDelicataSoonerLater-0B3bBhlmYjXEWKEs"
   );
   const [layout, setLayout] = useState<LayoutOption>("cropped");
-
   const [stackedConfig, setStackedConfig] =
     useState<StackedConfig>(DEFAULT_STACKED_CONFIG);
-
   const [downloadedClips, setDownloadedClips] = useState<DownloadedClip[]>([]);
   const [selectedDownloadedPath, setSelectedDownloadedPath] = useState("");
-
   const [downloadJobId, setDownloadJobId] = useState<string | null>(null);
   const [downloadJobStatus, setDownloadJobStatus] =
     useState<JobStatusResponse | null>(null);
-
   const [downloadedPath, setDownloadedPath] = useState<string | null>(null);
-
   const [processJobId, setProcessJobId] = useState<string | null>(null);
   const [processJobStatus, setProcessJobStatus] =
     useState<JobStatusResponse | null>(null);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [pipelineStage, setPipelineStage] = useState<PipelineStage>("idle");
   const [pipelineMessage, setPipelineMessage] = useState<string>("Ready.");
-
   const [twitchUser, setTwitchUser] = useState<TwitchUser | null>(null);
   const [twitchClips, setTwitchClips] = useState<TwitchClip[]>([]);
-  const [selectedTwitchClip, setSelectedTwitchClip] = useState<TwitchClip | null>(
-    null
-  );
+  const [selectedTwitchClip, setSelectedTwitchClip] =
+    useState<TwitchClip | null>(null);
   const [oauthStatus, setOauthStatus] = useState<string | null>(null);
-
   const [isCropEditorOpen, setIsCropEditorOpen] = useState(false);
   const [cropDraft, setCropDraft] = useState<StackedConfig>(DEFAULT_STACKED_CONFIG);
-  const [videoNaturalSize, setVideoNaturalSize] = useState({ width: 1920, height: 1080 });
-  const [videoDisplaySize, setVideoDisplaySize] = useState({ width: 1, height: 1 });
+  const [videoNaturalSize, setVideoNaturalSize] = useState({
+    width: 1920,
+    height: 1080,
+  });
+  const [videoDisplaySize, setVideoDisplaySize] = useState({
+    width: 1,
+    height: 1,
+  });
   const [dragState, setDragState] = useState<DragState>(null);
   const [cropEditorPreviewUrlOverride, setCropEditorPreviewUrlOverride] =
     useState<string | null>(null);
@@ -179,21 +90,29 @@ export default function Home() {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
+  const outputPreviewRef = useRef<HTMLDivElement | null>(null);
+  const previousPipelineStageRef = useRef<PipelineStage>("idle");
   const submittedLayoutRef = useRef<LayoutOption>(layout);
   const submittedSourceModeRef = useRef<SourceMode>(sourceMode);
 
   const outputVideoUrl = useMemo(() => {
     const result = processJobStatus?.result as ProcessJobResult | null;
     const outputUrl = result?.output_url;
+
     if (!outputUrl) return null;
     return `${API_BASE_URL}${outputUrl}`;
   }, [processJobStatus]);
 
   const selectedDownloadedClip = useMemo(() => {
-    return downloadedClips.find(
-      (clip) => clip.download_path === selectedDownloadedPath
-    ) ?? null;
+    return (
+      downloadedClips.find((clip) => clip.download_path === selectedDownloadedPath) ??
+      null
+    );
   }, [downloadedClips, selectedDownloadedPath]);
+
+  function getDownloadedClipUrl(clip: DownloadedClip) {
+    return `${API_BASE_URL}${clip.url}`;
+  }
 
   const cropEditorPreviewUrl = useMemo(() => {
     if (cropEditorPreviewUrlOverride) {
@@ -316,7 +235,6 @@ export default function Home() {
 
       const scaleX = videoNaturalSize.width / videoDisplaySize.width;
       const scaleY = videoNaturalSize.height / videoDisplaySize.height;
-
       const deltaX = (event.clientX - dragState.startClientX) * scaleX;
       const deltaY = (event.clientY - dragState.startClientY) * scaleY;
 
@@ -374,22 +292,18 @@ export default function Home() {
     setIsSubmitting(true);
     setRequestError(null);
     setPipelineStage("submitting");
-    setPipelineMessage("Submitting request...");
+    setPipelineMessage("Preparing pipeline...");
     submittedLayoutRef.current = layout;
     submittedSourceModeRef.current = sourceMode;
 
     setDownloadJobId(null);
     setDownloadJobStatus(null);
     setDownloadedPath(null);
-
     setProcessJobId(null);
     setProcessJobStatus(null);
-
     setCropEditorPreviewUrlOverride(null);
     setPendingCropProcessPath(null);
     setIsCropEditorOpen(false);
-    setPipelineStage("submitting");
-    setPipelineMessage("Preparing pipeline...");
 
     try {
       if (layout === "stacked" && !stackedConfigIsValid) {
@@ -496,6 +410,16 @@ export default function Home() {
     setClipUrl(clip.url);
     setSourceMode("twitch_url");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleSelectDownloadedClip(clip: DownloadedClip) {
+    setSelectedDownloadedPath(clip.download_path);
+    setSourceMode("downloaded_file");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleOpenDownloadedClip(clip: DownloadedClip) {
+    window.open(getDownloadedClipUrl(clip), "_blank", "noopener,noreferrer");
   }
 
   function handleLogoutTwitch() {
@@ -630,12 +554,11 @@ export default function Home() {
           setPipelineStage("download_complete");
           setPipelineMessage("Download complete.");
 
-          const previewUrl =
-            result?.download_url
-              ? `${API_BASE_URL}${result.download_url}`
-              : filename
-              ? `${API_BASE_URL}/storage/downloads/${encodeURIComponent(filename)}`
-              : null;
+          const previewUrl = result?.download_url
+            ? `${API_BASE_URL}${result.download_url}`
+            : filename
+            ? `${API_BASE_URL}/storage/downloads/${encodeURIComponent(filename)}`
+            : null;
 
           const submittedLayout = submittedLayoutRef.current;
           const submittedSourceMode = submittedSourceModeRef.current;
@@ -721,7 +644,7 @@ export default function Home() {
       }
     }
 
-    startProcessJob();
+    void startProcessJob();
   }, [downloadedPath, layout, processJobId, stackedConfig]);
 
   useEffect(() => {
@@ -775,10 +698,24 @@ export default function Home() {
     }
 
     const intervalId = setInterval(fetchProcessJobStatus, 2000);
-    fetchProcessJobStatus();
+    void fetchProcessJobStatus();
 
     return () => clearInterval(intervalId);
   }, [processJobId]);
+
+  useEffect(() => {
+    if (
+      pipelineStage === "processing" &&
+      previousPipelineStageRef.current !== "processing"
+    ) {
+      outputPreviewRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+
+    previousPipelineStageRef.current = pipelineStage;
+  }, [pipelineStage]);
 
   const overallStatus = pipelineStage;
 
@@ -826,7 +763,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-8">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 rounded-3xl border border-zinc-800 bg-zinc-900/80 p-6 backdrop-blur">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl">
@@ -843,781 +780,120 @@ export default function Home() {
             </div>
 
             <div className="w-full xl:max-w-sm">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-100">
-                      Twitch Account
-                    </p>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      {twitchUser
-                        ? "Connected and ready for clip selection."
-                        : "Connect to load recent clips."}
-                    </p>
-                  </div>
-
-                  {twitchUser ? (
-                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-                      Connected
-                    </span>
-                  ) : (
-                    <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs font-semibold text-zinc-400">
-                      Not connected
-                    </span>
-                  )}
-                </div>
-
-                {!twitchUser ? (
-                  <button
-                    type="button"
-                    onClick={handleLoginWithTwitch}
-                    className="mt-4 w-full rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-400"
-                  >
-                    Login with Twitch
-                  </button>
-                ) : (
-                  <div className="mt-4 space-y-4">
-                    <div className="flex items-center gap-3">
-                      {twitchUser.profile_image_url ? (
-                        <img
-                          src={twitchUser.profile_image_url}
-                          alt={twitchUser.display_name}
-                          className="h-12 w-12 rounded-full border border-zinc-700 object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-xs text-zinc-400">
-                          N/A
-                        </div>
-                      )}
-
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-zinc-100">
-                          {twitchUser.display_name}
-                        </p>
-                        <p className="truncate text-xs text-zinc-400">
-                          @{twitchUser.login}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-3">
-                        <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                          OAuth
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-green-400">
-                          {oauthStatus ?? "connected"}
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-3">
-                        <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                          Loaded clips
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-zinc-100">
-                          {twitchClips.length}
-                        </p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleLogoutTwitch}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-800"
-                    >
-                      Clear Twitch Session
-                    </button>
-                  </div>
-                )}
-              </div>
+              <AccountPanel
+                oauthStatus={oauthStatus}
+                twitchClipsCount={twitchClips.length}
+                twitchUser={twitchUser}
+                onLoginWithTwitch={handleLoginWithTwitch}
+                onLogoutTwitch={handleLogoutTwitch}
+              />
             </div>
           </div>
         </header>
 
-        <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
+        <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)]">
           <aside className="space-y-6">
-            <section className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
-              <div>
-                <h2 className="text-xl font-semibold">Editor Controls</h2>
-                <p className="mt-2 text-sm leading-6 text-zinc-400">
-                  Choose a source, pick a layout, and start the render pipeline.
-                </p>
-              </div>
+            <EditorControlsPanel
+              clipUrl={clipUrl}
+              isSubmitting={isSubmitting}
+              layout={layout}
+              selectedDownloadedPath={selectedDownloadedPath}
+              selectedTwitchClip={selectedTwitchClip}
+              sourceMode={sourceMode}
+              stackedConfig={stackedConfig}
+              stackedConfigIsValid={stackedConfigIsValid}
+              submitButtonLabel={submitButtonLabel}
+              twitchUser={twitchUser}
+              onClipUrlChange={setClipUrl}
+              onLayoutChange={setLayout}
+              onOpenCropEditor={() => openCropEditor()}
+              onSourceModeChange={setSourceMode}
+              onSubmit={handleSubmit}
+            />
 
-              <div className="mt-6 grid grid-cols-1 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSourceMode("twitch_clips")}
-                  className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                    sourceMode === "twitch_clips"
-                      ? "bg-violet-500 text-white"
-                      : "bg-zinc-950 text-zinc-300 hover:bg-zinc-800"
-                  }`}
-                >
-                  Twitch Clips
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSourceMode("twitch_url")}
-                  className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                    sourceMode === "twitch_url"
-                      ? "bg-violet-500 text-white"
-                      : "bg-zinc-950 text-zinc-300 hover:bg-zinc-800"
-                  }`}
-                >
-                  Twitch Clip URL
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSourceMode("downloaded_file")}
-                  className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                    sourceMode === "downloaded_file"
-                      ? "bg-violet-500 text-white"
-                      : "bg-zinc-950 text-zinc-300 hover:bg-zinc-800"
-                  }`}
-                >
-                  Downloaded File
-                </button>
-              </div>
-
-              <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-                {sourceMode === "twitch_clips" ? (
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-sm font-semibold text-zinc-100">
-                          Selected Clip
-                        </h3>
-                        <p className="mt-1 text-xs text-zinc-500">
-                          Process a clip directly from your authenticated Twitch list.
-                        </p>
-                      </div>
-
-                      {selectedTwitchClip ? (
-                        <span className="rounded-full bg-violet-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
-                          Ready
-                        </span>
-                      ) : null}
-                    </div>
-
-                    {!twitchUser ? (
-                      <p className="mt-4 text-sm text-zinc-500">
-                        Log in with Twitch to use this source mode.
-                      </p>
-                    ) : !selectedTwitchClip ? (
-                      <p className="mt-4 text-sm text-zinc-500">
-                        Choose one from the clips grid to continue.
-                      </p>
-                    ) : (
-                      <div className="mt-4 space-y-4">
-                        {selectedTwitchClip.thumbnail_url ? (
-                          <img
-                            src={selectedTwitchClip.thumbnail_url}
-                            alt={selectedTwitchClip.title ?? "Selected Twitch clip"}
-                            className="h-36 w-full rounded-xl border border-zinc-800 object-cover"
-                          />
-                        ) : null}
-
-                        <div>
-                          <p className="text-sm font-medium text-zinc-100">
-                            {selectedTwitchClip.title || "Untitled clip"}
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-400">
-                            <span>
-                              Creator: {selectedTwitchClip.creator_name ?? "Unknown"}
-                            </span>
-                            <span>•</span>
-                            <span>Views: {selectedTwitchClip.view_count ?? 0}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : sourceMode === "twitch_url" ? (
-                  <div>
-                    <label
-                      htmlFor="clipUrl"
-                      className="mb-2 block text-sm font-medium text-zinc-200"
-                    >
-                      Twitch clip URL
-                    </label>
-                    <input
-                      id="clipUrl"
-                      type="text"
-                      value={clipUrl}
-                      onChange={(event) => setClipUrl(event.target.value)}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
-                      placeholder="https://clips.twitch.tv/YourClipSlug"
-                    />
-                    <p className="mt-2 text-xs text-zinc-500">
-                      Use this mode for manual testing or direct pasted URLs.
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <label
-                      htmlFor="downloadedFile"
-                      className="mb-2 block text-sm font-medium text-zinc-200"
-                    >
-                      Downloaded file
-                    </label>
-                    <select
-                      id="downloadedFile"
-                      value={selectedDownloadedPath}
-                      onChange={(event) =>
-                        setSelectedDownloadedPath(event.target.value)
-                      }
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
-                    >
-                      {downloadedClips.length === 0 ? (
-                        <option value="">No downloaded files found</option>
-                      ) : (
-                        downloadedClips.map((clip) => (
-                          <option
-                            key={clip.download_path}
-                            value={clip.download_path}
-                          >
-                            {clip.filename}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                    <p className="mt-2 text-xs text-zinc-500">
-                      Useful for quick local render tests without redownloading clips.
-                    </p>
-                  </div>
-                )}
-
-                <div>
-                  <label
-                    htmlFor="layout"
-                    className="mb-2 block text-sm font-medium text-zinc-200"
-                  >
-                    Layout preset
-                  </label>
-                  <select
-                    id="layout"
-                    value={layout}
-                    onChange={(event) =>
-                      setLayout(event.target.value as LayoutOption)
-                    }
-                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
-                  >
-                    <option value="cropped">cropped</option>
-                    <option value="fullscreen">fullscreen</option>
-                    <option value="stacked">stacked</option>
-                  </select>
-                </div>
-
-                {layout === "stacked" && (
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <h3 className="text-sm font-semibold text-zinc-100">
-                            Visual Stacked Crop Editor
-                          </h3>
-                          <p className="mt-1 text-xs text-zinc-500">
-                            Final export stays fixed at 1080×1920. This editor only
-                            chooses the source crop areas for the top and bottom stack.
-                          </p>
-                        </div>
-                      </div>
-
-                      {sourceMode === "downloaded_file" ? (
-                        <button
-                          type="button"
-                          onClick={() => openCropEditor()}
-                          disabled={!selectedDownloadedPath}
-                          className="rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-3 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          Open Visual Crop Editor
-                        </button>
-                      ) : (
-                        <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-xs text-zinc-400">
-                          Twitch clip and Twitch URL stacked flows now auto-open the crop editor
-                          after download. Downloaded File mode can still open the crop editor directly.
-                        </div>
-                      )}
-
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm">
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="text-zinc-400">Top / Bottom split</span>
-                          <span className="font-semibold text-zinc-100">
-                            {Math.round(stackedConfig.split_ratio_top * 100)}% /{" "}
-                            {100 - Math.round(stackedConfig.split_ratio_top * 100)}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={
-                    isSubmitting ||
-                    (sourceMode === "twitch_clips" && !selectedTwitchClip) ||
-                    (sourceMode === "downloaded_file" && !selectedDownloadedPath) ||
-                    (layout === "stacked" && !stackedConfigIsValid)
-                  }
-                  className="w-full rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {submitButtonLabel}
-                </button>
-              </form>
-            </section>
-
-            <section className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold">Job Activity</h2>
-                  <p className="mt-1 text-sm text-zinc-500">
-                    Compact pipeline status for the current run.
-                  </p>
-                </div>
-
-                <span className={`text-sm font-semibold ${statusTone}`}>
-                  {overallStatus}
-                </span>
-              </div>
-
-              <div className="mt-5 grid gap-3">
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                    Selected source
-                  </p>
-                  <p className="mt-1 text-sm text-zinc-100">{sourceMode}</p>
-                </div>
-
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                    Layout
-                  </p>
-                  <p className="mt-1 text-sm text-zinc-100">{layout}</p>
-                </div>
-
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                    Pipeline stage
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-zinc-100">
-                    {pipelineStage}
-                  </p>
-                  <p className="mt-2 text-xs text-zinc-400">
-                    {pipelineMessage}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                    Download job
-                  </p>
-                  <p className="mt-1 truncate text-sm text-zinc-100">
-                    {downloadJobId ?? "Not started"}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                    Process job
-                  </p>
-                  <p className="mt-1 truncate text-sm text-zinc-100">
-                    {processJobId ?? "Not started"}
-                  </p>
-                </div>
-
-                {requestError && (
-                  <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                    {requestError}
-                  </div>
-                )}
-
-                {downloadJobStatus?.error && (
-                  <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                    Download error: {downloadJobStatus.error}
-                  </div>
-                )}
-
-                {processJobStatus?.error && (
-                  <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                    Process error: {processJobStatus.error}
-                  </div>
-                )}
-              </div>
-            </section>
+            <JobActivityPanel
+              downloadJobId={downloadJobId}
+              downloadJobStatus={downloadJobStatus}
+              layout={layout}
+              overallStatus={overallStatus}
+              pipelineMessage={pipelineMessage}
+              pipelineStage={pipelineStage}
+              processJobId={processJobId}
+              processJobStatus={processJobStatus}
+              requestError={requestError}
+              sourceMode={sourceMode}
+              statusTone={statusTone}
+            />
           </aside>
 
           <section className="space-y-6">
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold">Your Twitch Clips</h2>
-                  <p className="mt-2 text-sm leading-6 text-zinc-400">
-                    Select a clip as your source, send it into manual URL mode, or
-                    open it on Twitch.
-                  </p>
-                </div>
+            {sourceMode === "twitch_clips" ? (
+              <TwitchClipsPanel
+                selectedTwitchClip={selectedTwitchClip}
+                twitchClips={twitchClips}
+                twitchUser={twitchUser}
+                onSelectTwitchClip={handleSelectTwitchClip}
+                onUseClipAsUrl={handleUseClipAsUrl}
+              />
+            ) : sourceMode === "twitch_url" ? (
+              <TwitchUrlPanel
+                clipUrl={clipUrl}
+                onClipUrlChange={setClipUrl}
+              />
+            ) : (
+              <DownloadedFilesPanel
+                downloadedClips={downloadedClips}
+                getDownloadedClipUrl={getDownloadedClipUrl}
+                layout={layout}
+                selectedDownloadedClip={selectedDownloadedClip}
+                selectedDownloadedPath={selectedDownloadedPath}
+                onOpenCropEditor={() => openCropEditor()}
+                onOpenDownloadedClip={handleOpenDownloadedClip}
+                onSelectDownloadedClip={handleSelectDownloadedClip}
+              />
+            )}
 
-                {selectedTwitchClip ? (
-                  <div className="rounded-2xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-sm text-violet-200">
-                    Active clip:{" "}
-                    <span className="font-semibold">
-                      {selectedTwitchClip.title || "Untitled clip"}
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="mt-6">
-                {!twitchUser ? (
-                  <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 p-6 text-sm text-zinc-500">
-                    No Twitch account connected yet. Use the login button above to
-                    load recent clips.
-                  </div>
-                ) : twitchClips.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 p-6 text-sm text-zinc-500">
-                    Twitch login succeeded, but no clips were returned.
-                  </div>
-                ) : (
-                  <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-                    {twitchClips.map((clip) => {
-                      const isSelected = selectedTwitchClip?.id === clip.id;
-
-                      return (
-                        <div
-                          key={clip.id}
-                          className={`overflow-hidden rounded-2xl border bg-zinc-950 transition ${
-                            isSelected
-                              ? "border-violet-500 ring-1 ring-violet-500"
-                              : "border-zinc-800"
-                          }`}
-                        >
-                          {clip.thumbnail_url ? (
-                            <img
-                              src={clip.thumbnail_url}
-                              alt={clip.title ?? "Twitch clip thumbnail"}
-                              className="h-40 w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-40 items-center justify-center bg-zinc-900 text-sm text-zinc-500">
-                              No thumbnail
-                            </div>
-                          )}
-
-                          <div className="p-4">
-                            <div className="mb-2 flex items-start justify-between gap-3">
-                              <h3 className="line-clamp-2 text-sm font-semibold text-zinc-100">
-                                {clip.title || "Untitled clip"}
-                              </h3>
-                              {isSelected ? (
-                                <span className="rounded-full bg-violet-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
-                                  Selected
-                                </span>
-                              ) : null}
-                            </div>
-
-                            <div className="space-y-1 text-xs text-zinc-400">
-                              <p>Creator: {clip.creator_name ?? "Unknown"}</p>
-                              <p>Views: {clip.view_count ?? 0}</p>
-                              <p>
-                                Created:{" "}
-                                {clip.created_at
-                                  ? new Date(clip.created_at).toLocaleString()
-                                  : "Unknown"}
-                              </p>
-                            </div>
-
-                            <div className="mt-4 grid grid-cols-3 gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleSelectTwitchClip(clip)}
-                                className="rounded-xl bg-violet-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-violet-400"
-                              >
-                                Select
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleUseClipAsUrl(clip)}
-                                className="rounded-xl border border-zinc-700 px-3 py-2 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-800"
-                              >
-                                Use as URL
-                              </button>
-
-                              <a
-                                href={clip.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="rounded-xl border border-zinc-700 px-3 py-2 text-center text-xs font-semibold text-zinc-200 transition hover:bg-zinc-800"
-                              >
-                                Open
-                              </a>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold">Output Preview</h2>
-                  <p className="mt-2 text-sm leading-6 text-zinc-400">
-                    Once processing completes, the rendered vertical video appears here.
-                  </p>
-                </div>
-
-                {processJobStatus?.result ? (
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-300">
-                    {(processJobStatus.result as ProcessJobResult).layout ?? "N/A"} layout
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="mt-6 flex min-h-[700px] items-center justify-center rounded-3xl border border-dashed border-zinc-700 bg-zinc-950 p-4">
-                {outputVideoUrl ? (
-                  <video
-                    key={outputVideoUrl}
-                    controls
-                    className="max-h-[660px] rounded-2xl border border-zinc-800 shadow-2xl"
-                    src={outputVideoUrl}
-                  />
-                ) : (
-                  <div className="text-center text-sm text-zinc-500">
-                    No processed video yet. Start a job to preview the result.
-                  </div>
-                )}
-              </div>
-
-              {processJobStatus?.result && (
-                <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
-                    <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                      Filename
-                    </p>
-                    <p className="mt-2 break-all">
-                      {(processJobStatus.result as ProcessJobResult).filename ??
-                        "N/A"}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
-                    <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                      Layout
-                    </p>
-                    <p className="mt-2">
-                      {(processJobStatus.result as ProcessJobResult).layout ?? "N/A"}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
-                    <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                      Output URL
-                    </p>
-                    <p className="mt-2 break-all">
-                      {(processJobStatus.result as ProcessJobResult).output_url ??
-                        "N/A"}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
+            <OutputPreviewPanel
+              outputVideoUrl={outputVideoUrl}
+              pipelineMessage={pipelineMessage}
+              pipelineStage={pipelineStage}
+              processJobStatus={processJobStatus}
+              sectionRef={outputPreviewRef}
+              statusTone={statusTone}
+            />
           </section>
         </div>
       </div>
 
-      {isCropEditorOpen && cropEditorPreviewUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
-          <div className="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
-              <div>
-                <h2 className="text-lg font-semibold text-zinc-100">
-                  Visual Stacked Crop Editor
-                </h2>
-                <p className="mt-1 text-sm text-zinc-500">
-                  Drag the colored crop boxes over the source video. Final export remains fixed at 1080×1920.
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={closeCropEditor}
-                  className="rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-900"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={saveCropEditor}
-                  className="rounded-xl bg-violet-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-400"
-                >
-                  Save crop
-                </button>
-              </div>
-            </div>
-
-            <div className="grid min-h-0 flex-1 gap-6 overflow-hidden p-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="min-h-0 overflow-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                <div
-                  ref={previewContainerRef}
-                  className="relative mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-zinc-700 bg-black"
-                >
-                  <video
-                    ref={videoRef}
-                    src={cropEditorPreviewUrl}
-                    controls
-                    autoPlay
-                    loop
-                    muted
-                    className="block h-auto w-full"
-                    onLoadedMetadata={(event) => {
-                      const video = event.currentTarget;
-                      setVideoNaturalSize({
-                        width: video.videoWidth,
-                        height: video.videoHeight,
-                      });
-                      setVideoDisplaySize({
-                        width: video.clientWidth,
-                        height: video.clientHeight,
-                      });
-                    }}
-                    onLoadedData={(event) => {
-                      const video = event.currentTarget;
-                      setVideoDisplaySize({
-                        width: video.clientWidth,
-                        height: video.clientHeight,
-                      });
-                    }}
-                  />
-
-                  <div className="pointer-events-none absolute inset-0">
-                    <div
-                      className="pointer-events-auto absolute border-2 border-violet-400 bg-violet-500/20 shadow-[0_0_0_9999px_rgba(0,0,0,0.15)]"
-                      style={topPreviewStyle}
-                      onPointerDown={(event) => startDrag(event, "top_crop", "move")}
-                    >
-                      <div className="absolute left-2 top-2 rounded-md bg-violet-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
-                        Top / facecam
-                      </div>
-                      <div
-                        className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize rounded-tl-md bg-violet-400"
-                        onPointerDown={(event) => startDrag(event, "top_crop", "resize")}
-                      />
-                    </div>
-
-                    <div
-                      className="pointer-events-auto absolute border-2 border-cyan-400 bg-cyan-500/20 shadow-[0_0_0_9999px_rgba(0,0,0,0.08)]"
-                      style={bottomPreviewStyle}
-                      onPointerDown={(event) => startDrag(event, "bottom_crop", "move")}
-                    >
-                      <div className="absolute left-2 top-2 rounded-md bg-cyan-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
-                        Bottom / gameplay
-                      </div>
-                      <div
-                        className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize rounded-tl-md bg-cyan-400"
-                        onPointerDown={(event) => startDrag(event, "bottom_crop", "resize")}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4 overflow-auto">
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                  <h3 className="text-sm font-semibold text-zinc-100">
-                    Stack split
-                  </h3>
-                  <p className="mt-1 text-xs text-zinc-500">
-                    Controls the fixed 1080×1920 output split between the top and bottom stacked regions.
-                  </p>
-
-                  <div className="mt-4">
-                    <input
-                      type="range"
-                      min={20}
-                      max={80}
-                      step={1}
-                      value={Math.round(cropDraft.split_ratio_top * 100)}
-                      onChange={(event) =>
-                        updateSplitRatio(Number(event.target.value) / 100)
-                      }
-                      className="w-full"
-                    />
-                    <div className="mt-2 flex items-center justify-between text-sm text-zinc-300">
-                      <span>Top: {Math.round(cropDraft.split_ratio_top * 100)}%</span>
-                      <span>
-                        Bottom: {100 - Math.round(cropDraft.split_ratio_top * 100)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                  <h3 className="text-sm font-semibold text-zinc-100">Top crop</h3>
-                  <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">x</p>
-                      <p className="mt-1 text-zinc-100">{cropDraft.top_crop.x}</p>
-                    </div>
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">y</p>
-                      <p className="mt-1 text-zinc-100">{cropDraft.top_crop.y}</p>
-                    </div>
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">w</p>
-                      <p className="mt-1 text-zinc-100">{cropDraft.top_crop.w}</p>
-                    </div>
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">h</p>
-                      <p className="mt-1 text-zinc-100">{cropDraft.top_crop.h}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                  <h3 className="text-sm font-semibold text-zinc-100">Bottom crop</h3>
-                  <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">x</p>
-                      <p className="mt-1 text-zinc-100">{cropDraft.bottom_crop.x}</p>
-                    </div>
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">y</p>
-                      <p className="mt-1 text-zinc-100">{cropDraft.bottom_crop.y}</p>
-                    </div>
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">w</p>
-                      <p className="mt-1 text-zinc-100">{cropDraft.bottom_crop.w}</p>
-                    </div>
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">h</p>
-                      <p className="mt-1 text-zinc-100">{cropDraft.bottom_crop.h}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 text-xs leading-6 text-zinc-400">
-                  Purple crop fills the top stacked region.
-                  <br />
-                  Cyan crop fills the bottom stacked region.
-                  <br />
-                  Each crop is scaled to fit its destination while preserving aspect ratio.
-                  <br />
-                  No stretching is applied.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <CropEditorModal
+        bottomPreviewStyle={bottomPreviewStyle}
+        cropDraft={cropDraft}
+        cropEditorPreviewUrl={cropEditorPreviewUrl}
+        isOpen={isCropEditorOpen}
+        onClose={closeCropEditor}
+        onLoadedData={(video) => {
+          setVideoDisplaySize({
+            width: video.clientWidth,
+            height: video.clientHeight,
+          });
+        }}
+        onLoadedMetadata={(video) => {
+          setVideoNaturalSize({
+            width: video.videoWidth,
+            height: video.videoHeight,
+          });
+          setVideoDisplaySize({
+            width: video.clientWidth,
+            height: video.clientHeight,
+          });
+        }}
+        onSave={saveCropEditor}
+        onStartDrag={startDrag}
+        onUpdateSplitRatio={updateSplitRatio}
+        previewContainerRef={previewContainerRef}
+        topPreviewStyle={topPreviewStyle}
+        videoRef={videoRef}
+      />
     </main>
   );
 }
