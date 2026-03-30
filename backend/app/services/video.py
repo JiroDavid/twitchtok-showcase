@@ -16,6 +16,37 @@ def _clamp_split_ratio(value: float, minimum: float = 0.2, maximum: float = 0.8)
     return max(minimum, min(maximum, value))
 
 
+def _run_ffmpeg(command: list[str], context: str) -> None:
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=FFMPEG_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"FFmpeg timed out after {FFMPEG_TIMEOUT_SECONDS} seconds during {context}"
+        ) from exc
+
+    if result.returncode != 0:
+        stderr = result.stderr.strip() if result.stderr else ""
+        stdout = result.stdout.strip() if result.stdout else ""
+        error_message = stderr or stdout or "FFmpeg processing failed"
+        raise RuntimeError(error_message)
+
+
+def _escape_subtitles_filter_path(path: Path) -> str:
+    raw = path.resolve().as_posix()
+    escaped = raw.replace("\\", "\\\\")
+    escaped = escaped.replace(":", "\\:")
+    escaped = escaped.replace("'", r"\'")
+    escaped = escaped.replace("[", r"\[")
+    escaped = escaped.replace("]", r"\]")
+    escaped = escaped.replace(",", r"\,")
+    return escaped
+
+
 def _build_cover_crop_filter(
     crop_box: dict,
     target_width: int,
@@ -179,27 +210,57 @@ def process_video_to_vertical(
     else:
         raise ValueError(f"Unsupported layout: {layout}")
 
-    try:
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            timeout=FFMPEG_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(
-            f"FFmpeg timed out after {FFMPEG_TIMEOUT_SECONDS} seconds for layout '{layout}'"
-        ) from exc
-
-    if result.returncode != 0:
-        stderr = result.stderr.strip() if result.stderr else ""
-        stdout = result.stdout.strip() if result.stdout else ""
-        error_message = stderr or stdout or "FFmpeg processing failed"
-        raise RuntimeError(error_message)
+    _run_ffmpeg(command, f"layout '{layout}' render")
 
     return {
         "output_path": str(output_path),
         "filename": output_filename,
         "layout": layout,
+        "output_url": f"/storage/outputs/{output_filename}",
+    }
+
+
+def burn_subtitles_into_video(
+    input_video_path: str,
+    subtitles_path: str,
+    output_filename: str,
+) -> dict:
+    input_video = Path(input_video_path)
+    subtitles_file = Path(subtitles_path)
+
+    if not input_video.exists():
+        raise FileNotFoundError(f"Input video not found: {input_video_path}")
+
+    if not subtitles_file.exists():
+        raise FileNotFoundError(f"Subtitle file not found: {subtitles_path}")
+
+    output_path = OUTPUTS_DIR / output_filename
+    subtitles_filter = f"subtitles='{_escape_subtitles_filter_path(subtitles_file)}'"
+
+    command = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(input_video),
+        "-vf",
+        subtitles_filter,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "medium",
+        "-crf",
+        "18",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        str(output_path),
+    ]
+
+    _run_ffmpeg(command, "subtitle burn-in")
+
+    return {
+        "output_path": str(output_path),
+        "filename": output_filename,
         "output_url": f"/storage/outputs/{output_filename}",
     }

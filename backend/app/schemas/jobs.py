@@ -20,10 +20,16 @@ class StackedConfig(BaseModel):
     split_ratio_top: float = Field(default=0.4, ge=0.2, le=0.8)
 
 
+class CaptionConfig(BaseModel):
+    enabled: bool = False
+    burn_in: bool = True
+
+
 class VideoProcessJobRequest(BaseModel):
     input_path: str
     layout: Literal["cropped", "fullscreen", "stacked"]
     stacked_config: Optional[StackedConfig] = None
+    captions: Optional[CaptionConfig] = None
 
 
 class JobCreateResponse(BaseModel):

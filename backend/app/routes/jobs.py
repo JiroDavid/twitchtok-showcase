@@ -10,7 +10,8 @@ from app.schemas.jobs import (
 )
 from app.services.jobs import create_job, get_job, update_job_status, list_jobs
 from app.services.twitch_api import download_twitch_clip, extract_clip_slug
-from app.services.video import process_video_to_vertical
+from app.services.transcription import transcribe_video_to_srt
+from app.services.video import burn_subtitles_into_video, process_video_to_vertical
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -42,10 +43,16 @@ def process_clip_download_job(job_id: str, clip_url: str) -> None:
         update_job_status(job_id, "failed", error=str(exc))
 
 
-def process_video_job(job_id: str, input_path: str, layout: str, stacked_config=None) -> None:
+def process_video_job(
+    job_id: str,
+    input_path: str,
+    layout: str,
+    stacked_config=None,
+    captions=None,
+) -> None:
     print(
         f"[jobs] Starting video job: job_id={job_id}, input_path={input_path}, "
-        f"layout={layout}, stacked_config={stacked_config}"
+        f"layout={layout}, stacked_config={stacked_config}, captions={captions}"
     )
 
     try:
@@ -55,6 +62,24 @@ def process_video_job(job_id: str, input_path: str, layout: str, stacked_config=
         stem = input_file.stem
         short_job_id = job_id.split("-")[0]
         output_filename = f"{stem}_{layout}_{short_job_id}.mp4"
+        captions_enabled = bool(captions and captions.get("enabled"))
+        burn_in = True if not captions else bool(captions.get("burn_in", True))
+        captions_result = None
+
+        if captions_enabled:
+            srt_filename = f"{stem}_{layout}_{short_job_id}.srt"
+            transcription_result = transcribe_video_to_srt(
+                input_path=input_path,
+                output_filename=srt_filename,
+            )
+
+            captions_result = {
+                "enabled": True,
+                "burned_in": False,
+                "srt_path": transcription_result["srt_path"],
+                "srt_filename": transcription_result["srt_filename"],
+                "srt_url": f"/storage/outputs/{transcription_result['srt_filename']}",
+            }
 
         result = process_video_to_vertical(
             input_path=input_path,
@@ -62,6 +87,21 @@ def process_video_job(job_id: str, input_path: str, layout: str, stacked_config=
             layout=layout,
             stacked_config=stacked_config,
         )
+
+        if captions_enabled and burn_in and captions_result:
+            burned_output_filename = f"{stem}_{layout}_{short_job_id}_subtitled.mp4"
+            burned_video = burn_subtitles_into_video(
+                input_video_path=result["output_path"],
+                subtitles_path=captions_result["srt_path"],
+                output_filename=burned_output_filename,
+            )
+            result["output_path"] = burned_video["output_path"]
+            result["filename"] = burned_video["filename"]
+            result["output_url"] = burned_video["output_url"]
+            captions_result["burned_in"] = True
+
+        if captions_result:
+            result["captions"] = captions_result
 
         update_job_status(
             job_id,
@@ -112,6 +152,7 @@ def create_video_process_job(
     input_path = payload.input_path
     layout = payload.layout
     stacked_config = payload.stacked_config
+    captions = payload.captions
 
     input_file = Path(input_path)
     if not input_file.exists():
@@ -122,7 +163,8 @@ def create_video_process_job(
         payload={
             "input_path": input_path,
             "layout": layout,
-            "stacked_config": stacked_config.dict() if stacked_config else None,
+            "stacked_config": stacked_config.model_dump() if stacked_config else None,
+            "captions": captions.model_dump() if captions else None,
         },
     )
 
@@ -131,7 +173,8 @@ def create_video_process_job(
         job_id,
         input_path,
         layout,
-        stacked_config.dict() if stacked_config else None,
+        stacked_config.model_dump() if stacked_config else None,
+        captions.model_dump() if captions else None,
     )
 
     return JobCreateResponse(job_id=job_id, status="queued")
@@ -145,6 +188,7 @@ def get_job_status(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found")
 
     return JobStatusResponse(**job)
+
 
 @router.get("", response_model=list[JobStatusResponse])
 def get_all_jobs():
