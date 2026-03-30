@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 from app.services.video import OUTPUTS_DIR
@@ -16,11 +17,26 @@ def _format_srt_timestamp(seconds: float) -> str:
     return f"{hours:02}:{minutes:02}:{secs:02},{milliseconds:03}"
 
 
+def _clean_caption_text(text: str) -> str:
+    text = text.strip()
+
+    text = text.replace("!", "")
+    text = text.replace(",", "")
+
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _ends_with_hard_stop(text: str) -> bool:
+    text = text.strip()
+    return text.endswith(".") or text.endswith("?")
+
+
 def _segments_to_srt(segments: list[dict]) -> str:
     lines: list[str] = []
 
     for index, segment in enumerate(segments, start=1):
-        text = str(segment.get("text", "")).strip()
+        text = _clean_caption_text(str(segment.get("text", "")))
         if not text:
             continue
 
@@ -57,6 +73,10 @@ def _flatten_word_timestamps(segments: list[dict]) -> list[dict]:
             if not raw_word:
                 continue
 
+            cleaned_word = _clean_caption_text(raw_word)
+            if not cleaned_word:
+                continue
+
             start = word_info.get("start")
             end = word_info.get("end")
 
@@ -71,7 +91,7 @@ def _flatten_word_timestamps(segments: list[dict]) -> list[dict]:
 
             words.append(
                 {
-                    "word": raw_word,
+                    "word": cleaned_word,
                     "start": start_f,
                     "end": end_f,
                 }
@@ -95,6 +115,8 @@ def _chunk_words(
             return
 
         text = " ".join(word["word"] for word in current_words).strip()
+        text = _clean_caption_text(text)
+
         if not text:
             current_words = []
             return
@@ -109,16 +131,20 @@ def _chunk_words(
         current_words = []
 
     for word in words:
-        proposed_words = current_words + [word]
-        proposed_text = " ".join(item["word"] for item in proposed_words).strip()
+        if current_words:
+            proposed_words = current_words + [word]
+            proposed_text = " ".join(item["word"] for item in proposed_words).strip()
 
-        exceeds_word_limit = len(proposed_words) > max_words_per_chunk
-        exceeds_char_limit = len(proposed_text) > soft_max_chars_per_chunk
+            exceeds_word_limit = len(proposed_words) > max_words_per_chunk
+            exceeds_char_limit = len(proposed_text) > soft_max_chars_per_chunk
 
-        if current_words and (exceeds_word_limit or exceeds_char_limit):
-            flush_current_chunk()
+            if exceeds_word_limit or exceeds_char_limit:
+                flush_current_chunk()
 
         current_words.append(word)
+
+        if _ends_with_hard_stop(word["word"]):
+            flush_current_chunk()
 
     flush_current_chunk()
     return chunks
@@ -128,7 +154,7 @@ def _word_chunks_to_srt(chunks: list[dict]) -> str:
     lines: list[str] = []
 
     for index, chunk in enumerate(chunks, start=1):
-        text = str(chunk.get("text", "")).strip()
+        text = _clean_caption_text(str(chunk.get("text", "")))
         if not text:
             continue
 
