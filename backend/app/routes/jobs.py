@@ -8,6 +8,7 @@ from app.schemas.jobs import (
     JobStatusResponse,
     VideoProcessJobRequest,
 )
+from app.services.caption_refinement import refine_captions_json
 from app.services.jobs import create_job, get_job, update_job_status, list_jobs
 from app.services.twitch_api import download_twitch_clip, extract_clip_slug
 from app.services.transcription import transcribe_video_to_srt
@@ -62,8 +63,14 @@ def process_video_job(
         stem = input_file.stem
         short_job_id = job_id.split("-")[0]
         output_filename = f"{stem}_{layout}_{short_job_id}.mp4"
+
         captions_enabled = bool(captions and captions.get("enabled"))
         burn_in = True if not captions else bool(captions.get("burn_in", True))
+        refine_with_llm = bool(captions and captions.get("refine_with_llm"))
+        refinement_model = (
+            captions.get("refinement_model") if captions else None
+        )
+
         captions_result = None
 
         if captions_enabled:
@@ -83,6 +90,23 @@ def process_video_job(
                 "captions_json_filename": transcription_result["captions_json_filename"],
                 "captions_json_url": f"/storage/outputs/{transcription_result['captions_json_filename']}",
             }
+
+            if refine_with_llm:
+                try:
+                    refinement_result = refine_captions_json(
+                        captions_json_path=transcription_result["captions_json_path"],
+                        model_name=refinement_model,
+                    )
+                    captions_result["refinement"] = refinement_result
+                except Exception as exc:
+                    print(
+                        f"[jobs] Caption refinement failed: job_id={job_id}, error={exc}"
+                    )
+                    captions_result["refinement"] = {
+                        "applied": False,
+                        "model": refinement_model or "llama3:8b",
+                        "error": str(exc),
+                    }
 
         result = process_video_to_vertical(
             input_path=input_path,

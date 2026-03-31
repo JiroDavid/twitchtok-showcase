@@ -23,6 +23,8 @@ class StackedConfig(BaseModel):
 class CaptionConfig(BaseModel):
     enabled: bool = False
     burn_in: bool = True
+    refine_with_llm: bool = False
+    refinement_model: Optional[str] = None
 
 
 class VideoProcessJobRequest(BaseModel):
