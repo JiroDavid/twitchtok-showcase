@@ -8,6 +8,11 @@ from app.services.video import OUTPUTS_DIR
 DEFAULT_WHISPER_MODEL = "small"
 DEFAULT_MAX_WORDS_PER_CHUNK = 3
 DEFAULT_SOFT_MAX_CHARS_PER_CHUNK = 14
+DEFAULT_TIME_PRECISION = 2
+
+
+def _round_time(value: float, precision: int = DEFAULT_TIME_PRECISION) -> float:
+    return round(float(value), precision)
 
 
 def _format_srt_timestamp(seconds: float) -> str:
@@ -130,11 +135,21 @@ def _chunk_words(
             current_words = []
             return
 
+        rounded_words = [
+            {
+                "text": word["word"],
+                "start": _round_time(word["start"]),
+                "end": _round_time(word["end"]),
+            }
+            for word in current_words
+        ]
+
         chunks.append(
             {
-                "start": current_words[0]["start"],
-                "end": current_words[-1]["end"],
+                "start": _round_time(current_words[0]["start"]),
+                "end": _round_time(current_words[-1]["end"]),
                 "text": text,
+                "words": rounded_words,
             }
         )
         current_words = []
@@ -197,17 +212,43 @@ def _segments_to_caption_items(segments: list[dict]) -> list[dict]:
         if end < start:
             end = start
 
+        segment_words = []
+        for word_info in segment.get("words") or []:
+            raw_word = str(word_info.get("word", "")).strip()
+            cleaned_word = _clean_caption_text(raw_word)
+            if not cleaned_word:
+                continue
+
+            word_start = word_info.get("start")
+            word_end = word_info.get("end")
+            if word_start is None or word_end is None:
+                continue
+
+            word_start_f = float(word_start)
+            word_end_f = float(word_end)
+            if word_end_f < word_start_f:
+                word_end_f = word_start_f
+
+            segment_words.append(
+                {
+                    "text": cleaned_word,
+                    "start": _round_time(word_start_f),
+                    "end": _round_time(word_end_f),
+                }
+            )
+
         items.append(
             {
                 "id": index,
-                "start": start,
-                "end": end,
+                "start": _round_time(start),
+                "end": _round_time(end),
                 "raw_text": text,
                 "refined_text": None,
                 "final_text": text,
                 "source": "whisper",
                 "refinement_source": None,
                 "status": "draft",
+                "words": segment_words,
             }
         )
 
@@ -230,14 +271,15 @@ def _word_chunks_to_caption_items(chunks: list[dict]) -> list[dict]:
         items.append(
             {
                 "id": index,
-                "start": start,
-                "end": end,
+                "start": _round_time(start),
+                "end": _round_time(end),
                 "raw_text": text,
                 "refined_text": None,
                 "final_text": text,
                 "source": "whisper",
                 "refinement_source": None,
                 "status": "draft",
+                "words": chunk.get("words", []),
             }
         )
 
