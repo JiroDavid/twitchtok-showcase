@@ -50,36 +50,52 @@ def _extract_first_json_object(text: str) -> dict:
 
 
 def _build_refinement_prompt(captions: list[dict]) -> str:
-    serializable_captions = [
-        {
-            "id": caption["id"],
-            "raw_text": caption["raw_text"],
-            "start": caption["start"],
-            "end": caption["end"],
-        }
-        for caption in captions
-    ]
+    serializable_captions = []
+
+    for index, caption in enumerate(captions):
+        previous_text = captions[index - 1]["raw_text"] if index > 0 else None
+        next_text = captions[index + 1]["raw_text"] if index < len(captions) - 1 else None
+
+        serializable_captions.append(
+            {
+                "id": caption["id"],
+                "previous_text": previous_text,
+                "raw_text": caption["raw_text"],
+                "next_text": next_text,
+                "start": caption["start"],
+                "end": caption["end"],
+            }
+        )
 
     captions_json = json.dumps(serializable_captions, ensure_ascii=False, indent=2)
 
     return f"""You are refining draft subtitles for short-form creator content.
 
-Your goal is to make captions slightly easier to read while staying extremely faithful to what was actually said.
+Your goal is to make each caption slightly easier to read while staying extremely faithful to what was actually said.
+
+You are given:
+- the current caption
+- the previous caption
+- the next caption
+
+Use neighboring captions only as light context to interpret the current line more safely.
 
 Allowed changes:
 - fix capitalization
 - fix punctuation
 - make very small readability improvements
 - make very small grammar cleanups only when the intended meaning is obvious
+- use neighboring captions to resolve fragmented phrasing when it is very clear
 - keep slang, tone, and informal speech when possible
 
 Do not:
-- invent new words
+- invent new words or ideas
 - add context that was not spoken
 - rewrite aggressively
 - merge or split captions
 - change ids
 - change timestamps
+- move words across caption boundaries
 - sanitize or formalize streamer language too much
 
 Important rule:
