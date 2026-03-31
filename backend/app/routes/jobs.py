@@ -79,6 +79,9 @@ def process_video_job(
                 "srt_path": transcription_result["srt_path"],
                 "srt_filename": transcription_result["srt_filename"],
                 "srt_url": f"/storage/outputs/{transcription_result['srt_filename']}",
+                "captions_json_path": transcription_result["captions_json_path"],
+                "captions_json_filename": transcription_result["captions_json_filename"],
+                "captions_json_url": f"/storage/outputs/{transcription_result['captions_json_filename']}",
             }
 
         result = process_video_to_vertical(

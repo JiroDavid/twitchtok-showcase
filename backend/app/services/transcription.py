@@ -1,3 +1,4 @@
+import json
 import re
 from pathlib import Path
 
@@ -60,6 +61,14 @@ def _segments_to_srt(segments: list[dict]) -> str:
 def _write_srt_file(srt_path: Path, srt_content: str) -> None:
     srt_path.parent.mkdir(parents=True, exist_ok=True)
     srt_path.write_text(srt_content, encoding="utf-8")
+
+
+def _write_json_file(json_path: Path, payload: dict) -> None:
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
 
 def _flatten_word_timestamps(segments: list[dict]) -> list[dict]:
@@ -175,6 +184,66 @@ def _word_chunks_to_srt(chunks: list[dict]) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
+def _segments_to_caption_items(segments: list[dict]) -> list[dict]:
+    items: list[dict] = []
+
+    for index, segment in enumerate(segments, start=1):
+        text = _clean_caption_text(str(segment.get("text", "")))
+        if not text:
+            continue
+
+        start = float(segment.get("start", 0.0))
+        end = float(segment.get("end", start))
+        if end < start:
+            end = start
+
+        items.append(
+            {
+                "id": index,
+                "start": start,
+                "end": end,
+                "raw_text": text,
+                "refined_text": None,
+                "final_text": text,
+                "source": "whisper",
+                "refinement_source": None,
+                "status": "draft",
+            }
+        )
+
+    return items
+
+
+def _word_chunks_to_caption_items(chunks: list[dict]) -> list[dict]:
+    items: list[dict] = []
+
+    for index, chunk in enumerate(chunks, start=1):
+        text = _clean_caption_text(str(chunk.get("text", "")))
+        if not text:
+            continue
+
+        start = float(chunk.get("start", 0.0))
+        end = float(chunk.get("end", start))
+        if end < start:
+            end = start
+
+        items.append(
+            {
+                "id": index,
+                "start": start,
+                "end": end,
+                "raw_text": text,
+                "refined_text": None,
+                "final_text": text,
+                "source": "whisper",
+                "refinement_source": None,
+                "status": "draft",
+            }
+        )
+
+    return items
+
+
 def transcribe_video_to_srt(
     input_path: str,
     output_filename: str,
@@ -205,13 +274,29 @@ def transcribe_video_to_srt(
     if words:
         chunks = _chunk_words(words)
         srt_content = _word_chunks_to_srt(chunks)
+        caption_items = _word_chunks_to_caption_items(chunks)
     else:
         srt_content = _segments_to_srt(segments)
+        caption_items = _segments_to_caption_items(segments)
 
     srt_path = OUTPUTS_DIR / output_filename
     _write_srt_file(srt_path, srt_content)
 
+    captions_json_filename = f"{Path(output_filename).stem}.json"
+    captions_json_path = OUTPUTS_DIR / captions_json_filename
+
+    captions_payload = {
+        "source": "whisper",
+        "model": model_name,
+        "input_filename": input_file.name,
+        "captions": caption_items,
+    }
+
+    _write_json_file(captions_json_path, captions_payload)
+
     return {
         "srt_path": str(srt_path),
         "srt_filename": srt_path.name,
+        "captions_json_path": str(captions_json_path),
+        "captions_json_filename": captions_json_path.name,
     }
