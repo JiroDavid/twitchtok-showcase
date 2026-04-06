@@ -12,7 +12,11 @@ from app.services.caption_refinement import refine_captions_json
 from app.services.jobs import create_job, get_job, update_job_status, list_jobs
 from app.services.twitch_api import download_twitch_clip, extract_clip_slug
 from app.services.transcription import transcribe_video_to_srt
-from app.services.video import burn_subtitles_into_video, process_video_to_vertical
+from app.services.video import (
+    burn_subtitles_into_video,
+    extract_representative_frame,
+    process_video_to_vertical,
+)
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -63,6 +67,7 @@ def process_video_job(
         stem = input_file.stem
         short_job_id = job_id.split("-")[0]
         output_filename = f"{stem}_{layout}_{short_job_id}.mp4"
+        frame_filename = f"{stem}_{layout}_{short_job_id}_frame.jpg"
 
         captions_enabled = bool(captions and captions.get("enabled"))
         burn_in = True if not captions else bool(captions.get("burn_in", True))
@@ -126,6 +131,12 @@ def process_video_job(
             result["filename"] = burned_video["filename"]
             result["output_url"] = burned_video["output_url"]
             captions_result["burned_in"] = True
+
+        representative_frame = extract_representative_frame(
+            input_path=input_path,
+            output_filename=frame_filename,
+        )
+        result["representative_frame"] = representative_frame
 
         if captions_result:
             result["captions"] = captions_result

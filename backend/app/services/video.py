@@ -67,6 +67,46 @@ def _build_cover_crop_filter(
     )
 
 
+def extract_representative_frame(
+    input_path: str,
+    output_filename: str,
+) -> dict:
+    """
+    Extract a single representative frame from the source clip.
+
+    This intentionally uses the original input video rather than the final
+    rendered/subtitled output so future vision analysis is based on clean
+    source imagery rather than subtitle overlays.
+    """
+    input_file = Path(input_path)
+
+    if not input_file.exists():
+        raise FileNotFoundError(f"Input video not found: {input_path}")
+
+    output_path = OUTPUTS_DIR / output_filename
+
+    command = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(input_file),
+        "-vf",
+        "thumbnail,scale=720:-1",
+        "-frames:v",
+        "1",
+        str(output_path),
+    ]
+
+    _run_ffmpeg(command, "representative frame extraction")
+
+    return {
+        "frame_path": str(output_path),
+        "frame_filename": output_filename,
+        "frame_url": f"/storage/outputs/{output_filename}",
+        "source": "input_video",
+    }
+
+
 def process_video_to_vertical(
     input_path: str,
     output_filename: str,
