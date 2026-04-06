@@ -79,12 +79,15 @@ def _load_caption_text_from_metadata(metadata_payload: dict) -> str:
 def _build_metadata_prompt(metadata_payload: dict, transcript_text: str) -> str:
     render = metadata_payload.get("render") or {}
     representative_frame = metadata_payload.get("representative_frame") or {}
+    vision = metadata_payload.get("vision") or {}
+    vision_notes = vision.get("notes") or {}
 
     compact_context = {
         "layout": render.get("layout"),
         "output_filename": render.get("output_filename"),
         "frame_filename": representative_frame.get("frame_filename"),
         "transcript_text": transcript_text,
+        "vision_notes": vision_notes,
     }
 
     context_json = json.dumps(compact_context, ensure_ascii=False, indent=2)
@@ -97,12 +100,13 @@ Your task is to produce:
 - 1 short summary
 
 Rules:
-- Stay grounded in the provided transcript text only
-- Do not invent specific game details, names, or events unless clearly present
+- Stay grounded primarily in the provided transcript text
+- Use vision notes only as light supporting context
+- Do not invent specific game details, names, or events unless clearly supported
 - Keep titles short and suitable for TikTok / YouTube Shorts style clips
 - Hashtags should be concise, without the # symbol
 - Summary should be 1 to 2 sentences max
-- If the transcript context is weak, stay generic rather than hallucinating
+- If the context is weak, stay generic rather than hallucinating
 
 Return JSON only in exactly this shape:
 {{

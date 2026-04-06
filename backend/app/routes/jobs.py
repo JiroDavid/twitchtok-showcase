@@ -12,6 +12,7 @@ from app.services.caption_refinement import refine_captions_json
 from app.services.jobs import create_job, get_job, update_job_status, list_jobs
 from app.services.metadata import (
     apply_generated_metadata,
+    apply_vision_notes,
     build_clip_metadata_payload,
     save_clip_metadata,
 )
@@ -23,6 +24,7 @@ from app.services.video import (
     extract_representative_frame,
     process_video_to_vertical,
 )
+from app.services.vision_analysis import generate_vision_notes
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -156,6 +158,27 @@ def process_video_job(
                 output_result=result,
                 representative_frame=representative_frame,
                 captions_result=captions_result,
+            )
+
+            try:
+                vision_result = generate_vision_notes(
+                    image_path=representative_frame["frame_path"]
+                )
+            except Exception as exc:
+                print(
+                    f"[jobs] Vision analysis failed: job_id={job_id}, error={exc}"
+                )
+                vision_result = {
+                    "applied": False,
+                    "status": "failed",
+                    "model": "llava-llama3:8b",
+                    "reason": str(exc),
+                    "notes": None,
+                }
+
+            metadata_payload = apply_vision_notes(
+                metadata_payload=metadata_payload,
+                vision_result=vision_result,
             )
 
             try:

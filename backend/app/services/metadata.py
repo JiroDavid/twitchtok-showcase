@@ -18,9 +18,8 @@ def build_clip_metadata_payload(
     """
     Build a future-ready metadata scaffold for a processed clip.
 
-    This does not perform vision generation yet.
-    It creates a stable structured payload that future vision and LLM steps
-    can enrich without changing the rest of the pipeline contract.
+    This creates a stable structured payload that future vision and LLM
+    steps can enrich without changing the rest of the pipeline contract.
     """
     input_file = Path(input_path)
 
@@ -59,6 +58,7 @@ def build_clip_metadata_payload(
             "status": "pending",
             "notes": None,
             "model": None,
+            "reason": None,
         },
         "metadata_generation": {
             "status": "pending",
@@ -73,6 +73,20 @@ def build_clip_metadata_payload(
     }
 
     return payload
+
+
+def apply_vision_notes(
+    metadata_payload: dict,
+    vision_result: dict,
+) -> dict:
+    vision = metadata_payload.setdefault("vision", {})
+
+    vision["status"] = vision_result.get("status", "pending")
+    vision["notes"] = vision_result.get("notes")
+    vision["model"] = vision_result.get("model")
+    vision["reason"] = vision_result.get("reason")
+
+    return metadata_payload
 
 
 def apply_generated_metadata(
