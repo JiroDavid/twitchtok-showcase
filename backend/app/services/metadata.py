@@ -18,7 +18,7 @@ def build_clip_metadata_payload(
     """
     Build a future-ready metadata scaffold for a processed clip.
 
-    This does not perform AI generation yet.
+    This does not perform vision generation yet.
     It creates a stable structured payload that future vision and LLM steps
     can enrich without changing the rest of the pipeline contract.
     """
@@ -68,10 +68,31 @@ def build_clip_metadata_payload(
             "tone_tags": [],
             "category_tags": [],
             "model": None,
+            "reason": None,
         },
     }
 
     return payload
+
+
+def apply_generated_metadata(
+    metadata_payload: dict,
+    generation_result: dict,
+) -> dict:
+    metadata_generation = metadata_payload.setdefault("metadata_generation", {})
+
+    metadata_generation["status"] = generation_result.get("status", "pending")
+    metadata_generation["title_suggestions"] = generation_result.get(
+        "title_suggestions", []
+    )
+    metadata_generation["hashtag_suggestions"] = generation_result.get(
+        "hashtag_suggestions", []
+    )
+    metadata_generation["summary"] = generation_result.get("summary")
+    metadata_generation["model"] = generation_result.get("model")
+    metadata_generation["reason"] = generation_result.get("reason")
+
+    return metadata_payload
 
 
 def save_clip_metadata(

@@ -10,7 +10,12 @@ from app.schemas.jobs import (
 )
 from app.services.caption_refinement import refine_captions_json
 from app.services.jobs import create_job, get_job, update_job_status, list_jobs
-from app.services.metadata import build_clip_metadata_payload, save_clip_metadata
+from app.services.metadata import (
+    apply_generated_metadata,
+    build_clip_metadata_payload,
+    save_clip_metadata,
+)
+from app.services.metadata_generation import generate_metadata_suggestions
 from app.services.twitch_api import download_twitch_clip, extract_clip_slug
 from app.services.transcription import transcribe_video_to_srt
 from app.services.video import (
@@ -152,6 +157,28 @@ def process_video_job(
                 representative_frame=representative_frame,
                 captions_result=captions_result,
             )
+
+            try:
+                generation_result = generate_metadata_suggestions(metadata_payload)
+            except Exception as exc:
+                print(
+                    f"[jobs] Metadata generation failed: job_id={job_id}, error={exc}"
+                )
+                generation_result = {
+                    "applied": False,
+                    "status": "failed",
+                    "model": "llama3.1:8b",
+                    "reason": str(exc),
+                    "title_suggestions": [],
+                    "hashtag_suggestions": [],
+                    "summary": None,
+                }
+
+            metadata_payload = apply_generated_metadata(
+                metadata_payload=metadata_payload,
+                generation_result=generation_result,
+            )
+
             metadata_result = save_clip_metadata(
                 metadata_payload=metadata_payload,
                 output_filename=metadata_filename,
