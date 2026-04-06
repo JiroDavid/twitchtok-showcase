@@ -10,6 +10,7 @@ from app.schemas.jobs import (
 )
 from app.services.caption_refinement import refine_captions_json
 from app.services.jobs import create_job, get_job, update_job_status, list_jobs
+from app.services.metadata import build_clip_metadata_payload, save_clip_metadata
 from app.services.twitch_api import download_twitch_clip, extract_clip_slug
 from app.services.transcription import transcribe_video_to_srt
 from app.services.video import (
@@ -54,10 +55,12 @@ def process_video_job(
     layout: str,
     stacked_config=None,
     captions=None,
+    metadata=None,
 ) -> None:
     print(
         f"[jobs] Starting video job: job_id={job_id}, input_path={input_path}, "
-        f"layout={layout}, stacked_config={stacked_config}, captions={captions}"
+        f"layout={layout}, stacked_config={stacked_config}, captions={captions}, "
+        f"metadata={metadata}"
     )
 
     try:
@@ -68,13 +71,13 @@ def process_video_job(
         short_job_id = job_id.split("-")[0]
         output_filename = f"{stem}_{layout}_{short_job_id}.mp4"
         frame_filename = f"{stem}_{layout}_{short_job_id}_frame.jpg"
+        metadata_filename = f"{stem}_{layout}_{short_job_id}_metadata.json"
 
         captions_enabled = bool(captions and captions.get("enabled"))
         burn_in = True if not captions else bool(captions.get("burn_in", True))
         refine_with_llm = bool(captions and captions.get("refine_with_llm"))
-        refinement_model = (
-            captions.get("refinement_model") if captions else None
-        )
+        refinement_model = captions.get("refinement_model") if captions else None
+        metadata_enabled = True if not metadata else bool(metadata.get("enabled", True))
 
         captions_result = None
 
@@ -141,6 +144,20 @@ def process_video_job(
         if captions_result:
             result["captions"] = captions_result
 
+        if metadata_enabled:
+            metadata_payload = build_clip_metadata_payload(
+                input_path=input_path,
+                layout=layout,
+                output_result=result,
+                representative_frame=representative_frame,
+                captions_result=captions_result,
+            )
+            metadata_result = save_clip_metadata(
+                metadata_payload=metadata_payload,
+                output_filename=metadata_filename,
+            )
+            result["metadata"] = metadata_result
+
         update_job_status(
             job_id,
             "completed",
@@ -191,6 +208,7 @@ def create_video_process_job(
     layout = payload.layout
     stacked_config = payload.stacked_config
     captions = payload.captions
+    metadata = payload.metadata
 
     input_file = Path(input_path)
     if not input_file.exists():
@@ -203,6 +221,7 @@ def create_video_process_job(
             "layout": layout,
             "stacked_config": stacked_config.model_dump() if stacked_config else None,
             "captions": captions.model_dump() if captions else None,
+            "metadata": metadata.model_dump() if metadata else None,
         },
     )
 
@@ -213,6 +232,7 @@ def create_video_process_job(
         layout,
         stacked_config.model_dump() if stacked_config else None,
         captions.model_dump() if captions else None,
+        metadata.model_dump() if metadata else None,
     )
 
     return JobCreateResponse(job_id=job_id, status="queued")

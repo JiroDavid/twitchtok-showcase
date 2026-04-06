@@ -27,11 +27,16 @@ class CaptionConfig(BaseModel):
     refinement_model: Optional[str] = None
 
 
+class MetadataConfig(BaseModel):
+    enabled: bool = True
+
+
 class VideoProcessJobRequest(BaseModel):
     input_path: str
     layout: Literal["cropped", "fullscreen", "stacked"]
     stacked_config: Optional[StackedConfig] = None
     captions: Optional[CaptionConfig] = None
+    metadata: Optional[MetadataConfig] = None
 
 
 class JobCreateResponse(BaseModel):
