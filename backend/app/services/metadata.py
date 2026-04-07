@@ -14,6 +14,7 @@ def build_clip_metadata_payload(
     output_result: dict,
     representative_frame: dict | None = None,
     captions_result: dict | None = None,
+    config: dict | None = None,
 ) -> dict:
     """
     Build a future-ready metadata scaffold for a processed clip.
@@ -36,6 +37,7 @@ def build_clip_metadata_payload(
             "output_filename": output_result.get("filename"),
             "output_url": output_result.get("output_url"),
         },
+        "config": config or {},
         "representative_frame": representative_frame,
         "captions": {
             "enabled": bool(captions_result),

@@ -95,6 +95,23 @@ def process_video_job(
         selected_vision_model = vision_model or DEFAULT_VISION_MODEL
         selected_metadata_model = metadata_model or DEFAULT_METADATA_MODEL
 
+        metadata_config_snapshot = {
+            "job_id": job_id,
+            "layout": layout,
+            "stacked_config": stacked_config,
+            "captions": {
+                "enabled": captions_enabled,
+                "burn_in": burn_in,
+                "refine_with_llm": refine_with_llm,
+                "refinement_model": refinement_model,
+            },
+            "metadata": {
+                "enabled": metadata_enabled,
+                "vision_model": selected_vision_model,
+                "metadata_model": selected_metadata_model,
+            },
+        }
+
         captions_result = None
 
         if captions_enabled:
@@ -167,6 +184,7 @@ def process_video_job(
                 output_result=result,
                 representative_frame=representative_frame,
                 captions_result=captions_result,
+                config=metadata_config_snapshot,
             )
 
             try:
