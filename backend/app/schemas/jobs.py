@@ -29,6 +29,8 @@ class CaptionConfig(BaseModel):
 
 class MetadataConfig(BaseModel):
     enabled: bool = True
+    vision_model: Optional[str] = None
+    metadata_model: Optional[str] = None
 
 
 class VideoProcessJobRequest(BaseModel):

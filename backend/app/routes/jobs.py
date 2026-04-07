@@ -16,7 +16,10 @@ from app.services.metadata import (
     build_clip_metadata_payload,
     save_clip_metadata,
 )
-from app.services.metadata_generation import generate_metadata_suggestions
+from app.services.metadata_generation import (
+    DEFAULT_METADATA_MODEL,
+    generate_metadata_suggestions,
+)
 from app.services.twitch_api import download_twitch_clip, extract_clip_slug
 from app.services.transcription import transcribe_video_to_srt
 from app.services.video import (
@@ -24,7 +27,7 @@ from app.services.video import (
     extract_representative_frame,
     process_video_to_vertical,
 )
-from app.services.vision_analysis import generate_vision_notes
+from app.services.vision_analysis import DEFAULT_VISION_MODEL, generate_vision_notes
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -84,7 +87,13 @@ def process_video_job(
         burn_in = True if not captions else bool(captions.get("burn_in", True))
         refine_with_llm = bool(captions and captions.get("refine_with_llm"))
         refinement_model = captions.get("refinement_model") if captions else None
+
         metadata_enabled = True if not metadata else bool(metadata.get("enabled", True))
+        vision_model = metadata.get("vision_model") if metadata else None
+        metadata_model = metadata.get("metadata_model") if metadata else None
+
+        selected_vision_model = vision_model or DEFAULT_VISION_MODEL
+        selected_metadata_model = metadata_model or DEFAULT_METADATA_MODEL
 
         captions_result = None
 
@@ -162,7 +171,8 @@ def process_video_job(
 
             try:
                 vision_result = generate_vision_notes(
-                    image_path=representative_frame["frame_path"]
+                    image_path=representative_frame["frame_path"],
+                    model_name=vision_model,
                 )
             except Exception as exc:
                 print(
@@ -171,7 +181,7 @@ def process_video_job(
                 vision_result = {
                     "applied": False,
                     "status": "failed",
-                    "model": "llava-llama3:8b",
+                    "model": selected_vision_model,
                     "reason": str(exc),
                     "notes": None,
                 }
@@ -182,7 +192,10 @@ def process_video_job(
             )
 
             try:
-                generation_result = generate_metadata_suggestions(metadata_payload)
+                generation_result = generate_metadata_suggestions(
+                    metadata_payload=metadata_payload,
+                    model_name=metadata_model,
+                )
             except Exception as exc:
                 print(
                     f"[jobs] Metadata generation failed: job_id={job_id}, error={exc}"
@@ -190,7 +203,7 @@ def process_video_job(
                 generation_result = {
                     "applied": False,
                     "status": "failed",
-                    "model": "llama3.1:8b",
+                    "model": selected_metadata_model,
                     "reason": str(exc),
                     "title_suggestions": [],
                     "hashtag_suggestions": [],
