@@ -73,6 +73,16 @@ export type MetadataJsonCaptionsEntry = {
   words?: unknown[];
 };
 
+export type EditableCaptionDraft = {
+  id: number;
+  start: number;
+  end: number;
+  raw_text: string;
+  refined_text: string;
+  final_text: string;
+  status: string;
+};
+
 export type MetadataJsonVisionNotes = {
   scene_description?: string;
   visible_elements?: string[];

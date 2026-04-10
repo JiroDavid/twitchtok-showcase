@@ -15,6 +15,7 @@ import { DownloadedFilesPanel } from "./components/DownloadedFilesPanel";
 import { EditorControlsPanel } from "./components/EditorControlsPanel";
 import { JobActivityPanel } from "./components/JobActivityPanel";
 import { OutputPreviewPanel } from "./components/OutputPreviewPanel";
+import { SubtitleEditorModal } from "./components/SubtitleEditorModal";
 import { TwitchClipsPanel } from "./components/TwitchClipsPanel";
 import { TwitchUrlPanel } from "./components/TwitchUrlPanel";
 import type {
@@ -25,9 +26,11 @@ import type {
   DragMode,
   DragState,
   DragTarget,
+  EditableCaptionDraft,
   JobCreateResponse,
   JobStatusResponse,
   LayoutOption,
+  MetadataJsonCaptionsEntry,
   OAuthPayload,
   PipelineStage,
   ProcessJobResult,
@@ -57,6 +60,25 @@ const LAYOUT_LABELS: Record<LayoutOption, string> = {
   fullscreen: "Fullscreen",
   stacked: "Stacked",
 };
+
+function toEditableCaptionDraft(
+  caption: MetadataJsonCaptionsEntry,
+  index: number
+): EditableCaptionDraft {
+  return {
+    id: typeof caption.id === "number" ? caption.id : index + 1,
+    start: typeof caption.start === "number" ? caption.start : 0,
+    end: typeof caption.end === "number" ? caption.end : 0,
+    raw_text: caption.raw_text ?? "",
+    refined_text: caption.refined_text ?? "",
+    final_text:
+      caption.final_text?.trim() ||
+      caption.refined_text?.trim() ||
+      caption.raw_text?.trim() ||
+      "",
+    status: caption.status ?? "draft",
+  };
+}
 
 export default function Home() {
   const [sourceMode, setSourceMode] = useState<SourceMode>("twitch_url");
@@ -102,6 +124,12 @@ export default function Home() {
   const [cropEditorRequiresConfirmation, setCropEditorRequiresConfirmation] =
     useState(false);
 
+  const [isSubtitleEditorOpen, setIsSubtitleEditorOpen] = useState(false);
+  const [subtitleDrafts, setSubtitleDrafts] = useState<EditableCaptionDraft[]>([]);
+  const [savedSubtitleDrafts, setSavedSubtitleDrafts] = useState<EditableCaptionDraft[]>(
+    []
+  );
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
   const outputPreviewRef = useRef<HTMLDivElement | null>(null);
@@ -116,6 +144,18 @@ export default function Home() {
     if (!outputUrl) return null;
     return `${API_BASE_URL}${outputUrl}`;
   }, [processJobStatus]);
+
+  const processResult = useMemo(() => {
+    return processJobStatus?.result as ProcessJobResult | null;
+  }, [processJobStatus]);
+
+  const metadataPayload = useMemo(() => {
+    return processResult?.metadata?.payload;
+  }, [processResult]);
+
+  const generatedCaptionItems = useMemo(() => {
+    return metadataPayload?.captions?.items ?? [];
+  }, [metadataPayload]);
 
   const selectedDownloadedClip = useMemo(() => {
     return (
@@ -311,6 +351,14 @@ export default function Home() {
     };
   }, [dragState, videoDisplaySize, videoNaturalSize]);
 
+  useEffect(() => {
+    if (generatedCaptionItems.length === 0) return;
+
+    const nextDrafts = generatedCaptionItems.map(toEditableCaptionDraft);
+    setSubtitleDrafts(nextDrafts);
+    setSavedSubtitleDrafts(nextDrafts);
+  }, [generatedCaptionItems]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -329,6 +377,7 @@ export default function Home() {
     setCropEditorPreviewUrlOverride(null);
     setPendingCropProcessPath(null);
     setIsCropEditorOpen(false);
+    setIsSubtitleEditorOpen(false);
 
     try {
       if (layout === "stacked" && !stackedConfigIsValid) {
@@ -519,6 +568,65 @@ export default function Home() {
 
     setPipelineStage("idle");
     setPipelineMessage("Crop updated.");
+  }
+
+  function openSubtitleEditor() {
+    if (savedSubtitleDrafts.length === 0) return;
+    setSubtitleDrafts(savedSubtitleDrafts.map((caption) => ({ ...caption })));
+    setIsSubtitleEditorOpen(true);
+  }
+
+  function closeSubtitleEditor() {
+    setIsSubtitleEditorOpen(false);
+  }
+
+  function resetSubtitleEditor() {
+    setSubtitleDrafts(savedSubtitleDrafts.map((caption) => ({ ...caption })));
+  }
+
+  function saveSubtitleEditor() {
+    const sanitizedDrafts = subtitleDrafts.map((caption) => {
+      const start = Number.isFinite(caption.start) ? Math.max(0, caption.start) : 0;
+      const end = Number.isFinite(caption.end) ? Math.max(start, caption.end) : start;
+
+      return {
+        ...caption,
+        start,
+        end,
+        final_text: caption.final_text.trim(),
+      };
+    });
+
+    setSavedSubtitleDrafts(sanitizedDrafts);
+    setSubtitleDrafts(sanitizedDrafts);
+    setIsSubtitleEditorOpen(false);
+  }
+
+  function updateSubtitleDraft(
+    index: number,
+    field: "start" | "end" | "final_text",
+    value: number | string
+  ) {
+    setSubtitleDrafts((current) =>
+      current.map((caption, currentIndex) => {
+        if (currentIndex !== index) return caption;
+
+        if (field === "final_text") {
+          return {
+            ...caption,
+            final_text: String(value),
+          };
+        }
+
+        const numericValue =
+          typeof value === "number" && Number.isFinite(value) ? value : 0;
+
+        return {
+          ...caption,
+          [field]: numericValue,
+        };
+      })
+    );
   }
 
   function startDrag(
@@ -918,10 +1026,7 @@ export default function Home() {
                 onUseClipAsUrl={handleUseClipAsUrl}
               />
             ) : sourceMode === "twitch_url" ? (
-              <TwitchUrlPanel
-                clipUrl={clipUrl}
-                onClipUrlChange={setClipUrl}
-              />
+              <TwitchUrlPanel clipUrl={clipUrl} onClipUrlChange={setClipUrl} />
             ) : (
               <DownloadedFilesPanel
                 downloadedClips={downloadedClips}
@@ -936,6 +1041,7 @@ export default function Home() {
             )}
 
             <OutputPreviewPanel
+              onOpenSubtitleEditor={openSubtitleEditor}
               outputVideoUrl={outputVideoUrl}
               pipelineMessage={pipelineMessage}
               pipelineStage={pipelineStage}
@@ -975,6 +1081,16 @@ export default function Home() {
         previewContainerRef={previewContainerRef}
         topPreviewStyle={topPreviewStyle}
         videoRef={videoRef}
+      />
+
+      <SubtitleEditorModal
+        captions={subtitleDrafts}
+        isOpen={isSubtitleEditorOpen}
+        onChangeCaption={updateSubtitleDraft}
+        onClose={closeSubtitleEditor}
+        onReset={resetSubtitleEditor}
+        onSave={saveSubtitleEditor}
+        outputVideoUrl={outputVideoUrl}
       />
     </main>
   );

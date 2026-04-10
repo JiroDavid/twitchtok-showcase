@@ -29,6 +29,7 @@ const PIPELINE_STAGE_LABELS: Record<PipelineStage, string> = {
 };
 
 type OutputPreviewPanelProps = {
+  onOpenSubtitleEditor: () => void;
   outputVideoUrl: string | null;
   pipelineMessage: string;
   pipelineStage: PipelineStage;
@@ -51,6 +52,7 @@ function getPreferredCaptionText(caption: MetadataJsonCaptionsEntry) {
 }
 
 export function OutputPreviewPanel({
+  onOpenSubtitleEditor,
   outputVideoUrl,
   pipelineMessage,
   pipelineStage,
@@ -59,7 +61,9 @@ export function OutputPreviewPanel({
   statusTone,
 }: OutputPreviewPanelProps) {
   const processResult = processJobStatus?.result as ProcessJobResult | null;
-  const metadataPayload = processResult?.metadata?.payload as MetadataJsonPayload | undefined;
+  const metadataPayload = processResult?.metadata?.payload as
+    | MetadataJsonPayload
+    | undefined;
 
   const metadataGeneration = metadataPayload?.metadata_generation;
   const titleSuggestions = metadataGeneration?.title_suggestions ?? [];
@@ -239,8 +243,20 @@ export function OutputPreviewPanel({
                 </p>
               </div>
 
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-400">
-                {captionItems.length} segments
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-400">
+                  {captionItems.length} segments
+                </div>
+
+                {captionItems.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={onOpenSubtitleEditor}
+                    className="rounded-xl border border-violet-500/40 bg-violet-500/20 px-3 py-2 text-xs font-medium text-violet-100 transition hover:border-violet-400 hover:bg-violet-500/30"
+                  >
+                    Edit Subtitles
+                  </button>
+                ) : null}
               </div>
             </div>
 
