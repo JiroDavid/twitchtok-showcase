@@ -161,6 +161,17 @@ export default function Home() {
               split_ratio_top: stackedConfig.split_ratio_top,
             }
           : null,
+      captions: {
+        enabled: true,
+        burn_in: true,
+        refine_with_llm: true,
+        refinement_model: "llama3.1:8b",
+      },
+      metadata: {
+        enabled: true,
+        vision_model: "llava-llama3:8b",
+        metadata_model: "llama3.1:8b",
+      },
     };
   }
 

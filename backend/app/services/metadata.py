@@ -7,6 +7,26 @@ OUTPUTS_DIR = BASE_DIR / "storage" / "outputs"
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _load_captions_items(captions_json_path: str | None) -> list[dict]:
+    if not captions_json_path:
+        return []
+
+    json_file = Path(captions_json_path)
+    if not json_file.exists():
+        return []
+
+    try:
+        payload = json.loads(json_file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+
+    captions = payload.get("captions")
+    if not isinstance(captions, list):
+        return []
+
+    return captions
+
+
 def build_clip_metadata_payload(
     *,
     input_path: str,
@@ -23,6 +43,10 @@ def build_clip_metadata_payload(
     steps can enrich without changing the rest of the pipeline contract.
     """
     input_file = Path(input_path)
+    captions_json_path = (
+        captions_result.get("captions_json_path") if captions_result else None
+    )
+    caption_items = _load_captions_items(captions_json_path)
 
     payload = {
         "version": 1,
@@ -45,9 +69,7 @@ def build_clip_metadata_payload(
             "srt_path": captions_result.get("srt_path") if captions_result else None,
             "srt_filename": captions_result.get("srt_filename") if captions_result else None,
             "srt_url": captions_result.get("srt_url") if captions_result else None,
-            "captions_json_path": (
-                captions_result.get("captions_json_path") if captions_result else None
-            ),
+            "captions_json_path": captions_json_path,
             "captions_json_filename": (
                 captions_result.get("captions_json_filename") if captions_result else None
             ),
@@ -55,6 +77,7 @@ def build_clip_metadata_payload(
                 captions_result.get("captions_json_url") if captions_result else None
             ),
             "refinement": captions_result.get("refinement") if captions_result else None,
+            "items": caption_items,
         },
         "vision": {
             "status": "pending",

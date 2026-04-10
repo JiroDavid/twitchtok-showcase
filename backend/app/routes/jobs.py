@@ -83,6 +83,9 @@ def process_video_job(
         frame_filename = f"{stem}_{layout}_{short_job_id}_frame.jpg"
         metadata_filename = f"{stem}_{layout}_{short_job_id}_metadata.json"
 
+        # -------------------------
+        # CONFIG FLAGS
+        # -------------------------
         captions_enabled = bool(captions and captions.get("enabled"))
         burn_in = True if not captions else bool(captions.get("burn_in", True))
         refine_with_llm = bool(captions and captions.get("refine_with_llm"))
@@ -114,6 +117,9 @@ def process_video_job(
 
         captions_result = None
 
+        # -------------------------
+        # TRANSCRIPTION
+        # -------------------------
         if captions_enabled:
             srt_filename = f"{stem}_{layout}_{short_job_id}.srt"
             transcription_result = transcribe_video_to_srt(
@@ -149,6 +155,9 @@ def process_video_job(
                         "error": str(exc),
                     }
 
+        # -------------------------
+        # VIDEO RENDER
+        # -------------------------
         result = process_video_to_vertical(
             input_path=input_path,
             output_filename=output_filename,
@@ -156,6 +165,9 @@ def process_video_job(
             stacked_config=stacked_config,
         )
 
+        # -------------------------
+        # SUBTITLE BURN-IN
+        # -------------------------
         if captions_enabled and burn_in and captions_result:
             burned_output_filename = f"{stem}_{layout}_{short_job_id}_subtitled.mp4"
             burned_video = burn_subtitles_into_video(
@@ -168,6 +180,9 @@ def process_video_job(
             result["output_url"] = burned_video["output_url"]
             captions_result["burned_in"] = True
 
+        # -------------------------
+        # REPRESENTATIVE FRAME
+        # -------------------------
         representative_frame = extract_representative_frame(
             input_path=input_path,
             output_filename=frame_filename,
@@ -177,6 +192,9 @@ def process_video_job(
         if captions_result:
             result["captions"] = captions_result
 
+        # -------------------------
+        # METADATA PIPELINE
+        # -------------------------
         if metadata_enabled:
             metadata_payload = build_clip_metadata_payload(
                 input_path=input_path,
@@ -187,15 +205,14 @@ def process_video_job(
                 config=metadata_config_snapshot,
             )
 
+            # Vision
             try:
                 vision_result = generate_vision_notes(
                     image_path=representative_frame["frame_path"],
                     model_name=vision_model,
                 )
             except Exception as exc:
-                print(
-                    f"[jobs] Vision analysis failed: job_id={job_id}, error={exc}"
-                )
+                print(f"[jobs] Vision analysis failed: {exc}")
                 vision_result = {
                     "applied": False,
                     "status": "failed",
@@ -204,20 +221,16 @@ def process_video_job(
                     "notes": None,
                 }
 
-            metadata_payload = apply_vision_notes(
-                metadata_payload=metadata_payload,
-                vision_result=vision_result,
-            )
+            metadata_payload = apply_vision_notes(metadata_payload, vision_result)
 
+            # Metadata generation
             try:
                 generation_result = generate_metadata_suggestions(
                     metadata_payload=metadata_payload,
                     model_name=metadata_model,
                 )
             except Exception as exc:
-                print(
-                    f"[jobs] Metadata generation failed: job_id={job_id}, error={exc}"
-                )
+                print(f"[jobs] Metadata generation failed: {exc}")
                 generation_result = {
                     "applied": False,
                     "status": "failed",
@@ -229,31 +242,32 @@ def process_video_job(
                 }
 
             metadata_payload = apply_generated_metadata(
-                metadata_payload=metadata_payload,
-                generation_result=generation_result,
+                metadata_payload, generation_result
             )
 
             metadata_result = save_clip_metadata(
                 metadata_payload=metadata_payload,
                 output_filename=metadata_filename,
             )
-            result["metadata"] = metadata_result
 
-        update_job_status(
-            job_id,
-            "completed",
-            result=result,
-        )
 
-        print(
-            f"[jobs] Video job completed: job_id={job_id}, "
-            f"output_path={result['output_path']}"
-        )
+            result["metadata"] = {
+                **metadata_result,
+                "payload": metadata_payload,
+            }
+
+        update_job_status(job_id, "completed", result=result)
+
+        print(f"[jobs] Video job completed: {job_id}")
 
     except Exception as exc:
-        print(f"[jobs] Video job failed: job_id={job_id}, error={exc}")
+        print(f"[jobs] Video job failed: {job_id}, error={exc}")
         update_job_status(job_id, "failed", error=str(exc))
 
+
+# -------------------------
+# ROUTES
+# -------------------------
 
 @router.post("/download-clip", response_model=JobCreateResponse)
 def create_clip_download_job(
@@ -269,10 +283,7 @@ def create_clip_download_job(
 
     job_id = create_job(
         job_type="clip_download",
-        payload={
-            "clip_url": clip_url,
-            "clip_slug": clip_slug,
-        },
+        payload={"clip_url": clip_url, "clip_slug": clip_slug},
     )
 
     background_tasks.add_task(process_clip_download_job, job_id, clip_url)
