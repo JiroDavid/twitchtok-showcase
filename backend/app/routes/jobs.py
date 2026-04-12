@@ -6,6 +6,7 @@ from app.schemas.jobs import (
     ClipDownloadJobRequest,
     JobCreateResponse,
     JobStatusResponse,
+    SubtitleRerenderJobRequest,
     VideoProcessJobRequest,
 )
 from app.services.caption_refinement import refine_captions_json
@@ -20,8 +21,14 @@ from app.services.metadata_generation import (
     DEFAULT_METADATA_MODEL,
     generate_metadata_suggestions,
 )
+from app.services.transcription import (
+    load_captions_json,
+    save_captions_json,
+    transcribe_video_to_srt,
+    update_captions_payload_with_edits,
+    write_srt_from_captions_json,
+)
 from app.services.twitch_api import download_twitch_clip, extract_clip_slug
-from app.services.transcription import transcribe_video_to_srt
 from app.services.video import (
     burn_subtitles_into_video,
     extract_representative_frame,
@@ -83,9 +90,6 @@ def process_video_job(
         frame_filename = f"{stem}_{layout}_{short_job_id}_frame.jpg"
         metadata_filename = f"{stem}_{layout}_{short_job_id}_metadata.json"
 
-        # -------------------------
-        # CONFIG FLAGS
-        # -------------------------
         captions_enabled = bool(captions and captions.get("enabled"))
         burn_in = True if not captions else bool(captions.get("burn_in", True))
         refine_with_llm = bool(captions and captions.get("refine_with_llm"))
@@ -117,9 +121,6 @@ def process_video_job(
 
         captions_result = None
 
-        # -------------------------
-        # TRANSCRIPTION
-        # -------------------------
         if captions_enabled:
             srt_filename = f"{stem}_{layout}_{short_job_id}.srt"
             transcription_result = transcribe_video_to_srt(
@@ -155,9 +156,6 @@ def process_video_job(
                         "error": str(exc),
                     }
 
-        # -------------------------
-        # VIDEO RENDER
-        # -------------------------
         result = process_video_to_vertical(
             input_path=input_path,
             output_filename=output_filename,
@@ -165,9 +163,6 @@ def process_video_job(
             stacked_config=stacked_config,
         )
 
-        # -------------------------
-        # SUBTITLE BURN-IN
-        # -------------------------
         if captions_enabled and burn_in and captions_result:
             burned_output_filename = f"{stem}_{layout}_{short_job_id}_subtitled.mp4"
             burned_video = burn_subtitles_into_video(
@@ -180,9 +175,6 @@ def process_video_job(
             result["output_url"] = burned_video["output_url"]
             captions_result["burned_in"] = True
 
-        # -------------------------
-        # REPRESENTATIVE FRAME
-        # -------------------------
         representative_frame = extract_representative_frame(
             input_path=input_path,
             output_filename=frame_filename,
@@ -192,9 +184,6 @@ def process_video_job(
         if captions_result:
             result["captions"] = captions_result
 
-        # -------------------------
-        # METADATA PIPELINE
-        # -------------------------
         if metadata_enabled:
             metadata_payload = build_clip_metadata_payload(
                 input_path=input_path,
@@ -205,7 +194,6 @@ def process_video_job(
                 config=metadata_config_snapshot,
             )
 
-            # Vision
             try:
                 vision_result = generate_vision_notes(
                     image_path=representative_frame["frame_path"],
@@ -223,7 +211,6 @@ def process_video_job(
 
             metadata_payload = apply_vision_notes(metadata_payload, vision_result)
 
-            # Metadata generation
             try:
                 generation_result = generate_metadata_suggestions(
                     metadata_payload=metadata_payload,
@@ -250,7 +237,6 @@ def process_video_job(
                 output_filename=metadata_filename,
             )
 
-
             result["metadata"] = {
                 **metadata_result,
                 "payload": metadata_payload,
@@ -265,9 +251,71 @@ def process_video_job(
         update_job_status(job_id, "failed", error=str(exc))
 
 
-# -------------------------
-# ROUTES
-# -------------------------
+def process_subtitle_rerender_job(
+    job_id: str,
+    input_video_path: str,
+    captions_json_path: str,
+    items: list[dict],
+) -> None:
+    print(
+        f"[jobs] Starting subtitle rerender job: job_id={job_id}, "
+        f"input_video_path={input_video_path}, captions_json_path={captions_json_path}"
+    )
+
+    try:
+        update_job_status(job_id, "processing")
+
+        input_video = Path(input_video_path)
+        captions_json_file = Path(captions_json_path)
+
+        if not input_video.exists():
+            raise FileNotFoundError(f"Input video not found: {input_video_path}")
+
+        if not captions_json_file.exists():
+            raise FileNotFoundError(f"Captions JSON not found: {captions_json_path}")
+
+        captions_payload = load_captions_json(captions_json_path)
+        updated_payload = update_captions_payload_with_edits(captions_payload, items)
+        saved_json_result = save_captions_json(captions_json_path, updated_payload)
+
+        srt_filename = f"{captions_json_file.stem}_edited.srt"
+        srt_result = write_srt_from_captions_json(
+            captions_json_path=captions_json_path,
+            output_filename=srt_filename,
+        )
+
+        rerender_filename = f"{input_video.stem}_edited_subtitled.mp4"
+        rerender_result = burn_subtitles_into_video(
+            input_video_path=input_video_path,
+            subtitles_path=srt_result["srt_path"],
+            output_filename=rerender_filename,
+        )
+
+        result = {
+            "output_path": rerender_result["output_path"],
+            "filename": rerender_result["filename"],
+            "output_url": rerender_result["output_url"],
+            "captions": {
+                "enabled": True,
+                "burned_in": True,
+                "srt_path": srt_result["srt_path"],
+                "srt_filename": srt_result["srt_filename"],
+                "srt_url": srt_result["srt_url"],
+                "captions_json_path": saved_json_result["captions_json_path"],
+                "captions_json_filename": saved_json_result["captions_json_filename"],
+                "captions_json_url": saved_json_result["captions_json_url"],
+                "edited": True,
+                "items": updated_payload.get("captions", []),
+            },
+        }
+
+        update_job_status(job_id, "completed", result=result)
+        print(f"[jobs] Subtitle rerender job completed: {job_id}")
+
+    except Exception as exc:
+        print(f"[jobs] Subtitle rerender job failed: {job_id}, error={exc}")
+        update_job_status(job_id, "failed", error=str(exc))
+
 
 @router.post("/download-clip", response_model=JobCreateResponse)
 def create_clip_download_job(
@@ -325,6 +373,40 @@ def create_video_process_job(
         stacked_config.model_dump() if stacked_config else None,
         captions.model_dump() if captions else None,
         metadata.model_dump() if metadata else None,
+    )
+
+    return JobCreateResponse(job_id=job_id, status="queued")
+
+
+@router.post("/subtitle-rerender", response_model=JobCreateResponse)
+def create_subtitle_rerender_job(
+    payload: SubtitleRerenderJobRequest,
+    background_tasks: BackgroundTasks,
+):
+    input_video_file = Path(payload.input_video_path)
+    captions_json_file = Path(payload.captions_json_path)
+
+    if not input_video_file.exists():
+        raise HTTPException(status_code=404, detail="Input video file not found")
+
+    if not captions_json_file.exists():
+        raise HTTPException(status_code=404, detail="Captions JSON file not found")
+
+    job_id = create_job(
+        job_type="subtitle_rerender",
+        payload={
+            "input_video_path": payload.input_video_path,
+            "captions_json_path": payload.captions_json_path,
+            "items": [item.model_dump() for item in payload.items],
+        },
+    )
+
+    background_tasks.add_task(
+        process_subtitle_rerender_job,
+        job_id,
+        payload.input_video_path,
+        payload.captions_json_path,
+        [item.model_dump() for item in payload.items],
     )
 
     return JobCreateResponse(job_id=job_id, status="queued")

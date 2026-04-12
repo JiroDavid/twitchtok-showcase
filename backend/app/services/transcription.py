@@ -25,10 +25,8 @@ def _format_srt_timestamp(seconds: float) -> str:
 
 def _clean_caption_text(text: str) -> str:
     text = text.strip()
-
     text = text.replace("!", "")
     text = text.replace(",", "")
-
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
@@ -74,6 +72,13 @@ def _write_json_file(json_path: Path, payload: dict) -> None:
         json.dumps(payload, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
+
+
+def _read_json_file(json_path: Path) -> dict:
+    if not json_path.exists():
+        raise FileNotFoundError(f"JSON file not found: {json_path}")
+
+    return json.loads(json_path.read_text(encoding="utf-8"))
 
 
 def _flatten_word_timestamps(segments: list[dict]) -> list[dict]:
@@ -284,6 +289,135 @@ def _word_chunks_to_caption_items(chunks: list[dict]) -> list[dict]:
         )
 
     return items
+
+
+def _caption_items_to_srt(caption_items: list[dict]) -> str:
+    lines: list[str] = []
+    written_index = 1
+
+    for item in caption_items:
+        text = _clean_caption_text(
+            str(
+                item.get("final_text")
+                or item.get("refined_text")
+                or item.get("raw_text")
+                or ""
+            )
+        )
+        if not text:
+            continue
+
+        start = float(item.get("start", 0.0))
+        end = float(item.get("end", start))
+        if end < start:
+            end = start
+
+        lines.extend(
+            [
+                str(written_index),
+                f"{_format_srt_timestamp(start)} --> {_format_srt_timestamp(end)}",
+                text,
+                "",
+            ]
+        )
+        written_index += 1
+
+    return "\n".join(lines).strip() + "\n"
+
+
+def save_captions_json(captions_json_path: str, captions_payload: dict) -> dict:
+    json_path = Path(captions_json_path)
+    _write_json_file(json_path, captions_payload)
+
+    return {
+        "captions_json_path": str(json_path),
+        "captions_json_filename": json_path.name,
+        "captions_json_url": f"/storage/outputs/{json_path.name}",
+    }
+
+
+def load_captions_json(captions_json_path: str) -> dict:
+    return _read_json_file(Path(captions_json_path))
+
+
+def update_captions_payload_with_edits(
+    captions_payload: dict,
+    edited_items: list[dict],
+) -> dict:
+    existing_items = captions_payload.get("captions") or []
+    existing_by_id = {
+        int(item.get("id")): item
+        for item in existing_items
+        if item.get("id") is not None
+    }
+
+    updated_items: list[dict] = []
+
+    for index, edited_item in enumerate(edited_items, start=1):
+        item_id = int(edited_item.get("id", index))
+        existing_item = existing_by_id.get(item_id, {})
+
+        start = float(edited_item.get("start", existing_item.get("start", 0.0)))
+        end = float(edited_item.get("end", existing_item.get("end", start)))
+        if end < start:
+            end = start
+
+        updated_items.append(
+            {
+                "id": item_id,
+                "start": _round_time(start),
+                "end": _round_time(end),
+                "raw_text": str(
+                    edited_item.get("raw_text", existing_item.get("raw_text", ""))
+                ),
+                "refined_text": edited_item.get(
+                    "refined_text",
+                    existing_item.get("refined_text"),
+                ),
+                "final_text": _clean_caption_text(
+                    str(
+                        edited_item.get(
+                            "final_text",
+                            existing_item.get("final_text")
+                            or existing_item.get("refined_text")
+                            or existing_item.get("raw_text")
+                            or "",
+                        )
+                    )
+                ),
+                "source": existing_item.get("source", "whisper"),
+                "refinement_source": existing_item.get("refinement_source"),
+                "status": "edited",
+                "words": existing_item.get("words", []),
+            }
+        )
+
+    next_payload = dict(captions_payload)
+    next_payload["captions"] = updated_items
+    next_payload["edited"] = True
+    return next_payload
+
+
+def write_srt_from_captions_json(
+    captions_json_path: str,
+    output_filename: str | None = None,
+) -> dict:
+    json_path = Path(captions_json_path)
+    payload = load_captions_json(str(json_path))
+    caption_items = payload.get("captions") or []
+
+    if output_filename is None:
+        output_filename = f"{json_path.stem}.srt"
+
+    srt_path = OUTPUTS_DIR / output_filename
+    srt_content = _caption_items_to_srt(caption_items)
+    _write_srt_file(srt_path, srt_content)
+
+    return {
+        "srt_path": str(srt_path),
+        "srt_filename": srt_path.name,
+        "srt_url": f"/storage/outputs/{srt_path.name}",
+    }
 
 
 def transcribe_video_to_srt(

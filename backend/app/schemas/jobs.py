@@ -41,6 +41,22 @@ class VideoProcessJobRequest(BaseModel):
     metadata: Optional[MetadataConfig] = None
 
 
+class EditableCaptionItem(BaseModel):
+    id: int
+    start: float
+    end: float
+    raw_text: str = ""
+    refined_text: Optional[str] = None
+    final_text: str
+    status: str = "draft"
+
+
+class SubtitleRerenderJobRequest(BaseModel):
+    input_video_path: str
+    captions_json_path: str
+    items: list[EditableCaptionItem]
+
+
 class JobCreateResponse(BaseModel):
     job_id: str
     status: str
