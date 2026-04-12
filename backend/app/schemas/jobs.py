@@ -41,6 +41,19 @@ class VideoProcessJobRequest(BaseModel):
     metadata: Optional[MetadataConfig] = None
 
 
+class CaptionStyle(BaseModel):
+    color: str = "#FFFFFF"
+    font_family: str = "Arial"
+    font_size: int = 54
+
+
+class CaptionPlacement(BaseModel):
+    track: Literal["top", "bottom", "free"] = "bottom"
+    x: float | None = None
+    y: float | None = None
+    align: Literal["top", "middle", "bottom"] = "bottom"
+
+
 class EditableCaptionItem(BaseModel):
     id: int
     start: float
@@ -49,6 +62,9 @@ class EditableCaptionItem(BaseModel):
     refined_text: Optional[str] = None
     final_text: str
     status: str = "draft"
+    is_manual: bool = False
+    style: CaptionStyle = Field(default_factory=CaptionStyle)
+    placement: CaptionPlacement = Field(default_factory=CaptionPlacement)
 
 
 class SubtitleRerenderJobRequest(BaseModel):

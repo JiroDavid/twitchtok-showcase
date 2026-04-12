@@ -35,6 +35,21 @@ export type ProcessCaptionRefinementResult = {
   error?: string;
 };
 
+export type CaptionTrack = "top" | "bottom" | "free";
+
+export type CaptionStyle = {
+  color?: string;
+  font_family?: string;
+  font_size?: number;
+};
+
+export type CaptionPlacement = {
+  track?: CaptionTrack;
+  x?: number | null;
+  y?: number | null;
+  align?: "top" | "middle" | "bottom";
+};
+
 export type MetadataJsonCaptionsEntry = {
   id?: number;
   start?: number;
@@ -46,6 +61,9 @@ export type MetadataJsonCaptionsEntry = {
   refinement_source?: string | null;
   status?: string;
   words?: unknown[];
+  is_manual?: boolean;
+  style?: CaptionStyle;
+  placement?: CaptionPlacement;
 };
 
 export type EditableCaptionDraft = {
@@ -56,6 +74,18 @@ export type EditableCaptionDraft = {
   refined_text: string;
   final_text: string;
   status: string;
+  is_manual: boolean;
+  style: {
+    color: string;
+    font_family: string;
+    font_size: number;
+  };
+  placement: {
+    track: CaptionTrack;
+    x: number | null;
+    y: number | null;
+    align: "top" | "middle" | "bottom";
+  };
 };
 
 export type ProcessCaptionsResult = {
@@ -64,6 +94,9 @@ export type ProcessCaptionsResult = {
   srt_path?: string;
   srt_filename?: string;
   srt_url?: string;
+  ass_path?: string;
+  ass_filename?: string;
+  ass_url?: string;
   captions_json_path?: string;
   captions_json_filename?: string;
   captions_json_url?: string;
@@ -133,6 +166,9 @@ export type MetadataJsonPayload = {
     srt_path?: string;
     srt_filename?: string;
     srt_url?: string;
+    ass_path?: string;
+    ass_filename?: string;
+    ass_url?: string;
     captions_json_path?: string;
     captions_json_filename?: string;
     captions_json_url?: string;

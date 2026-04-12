@@ -6,13 +6,25 @@ type SubtitleEditorModalProps = {
   captions: EditableCaptionDraft[];
   isApplying: boolean;
   isOpen: boolean;
+  onAddCaption: () => void;
   onApply: () => void;
   onChangeCaption: (
     index: number,
     field: "start" | "end" | "final_text",
     value: number | string
   ) => void;
+  onChangePlacement: (
+    index: number,
+    field: "track" | "x" | "y" | "align",
+    value: string | number | null
+  ) => void;
+  onChangeStyle: (
+    index: number,
+    field: "color" | "font_family" | "font_size",
+    value: string | number
+  ) => void;
   onClose: () => void;
+  onDeleteCaption: (id: number) => void;
   onReset: () => void;
   onSave: () => void;
   outputVideoUrl: string | null;
@@ -27,9 +39,13 @@ export function SubtitleEditorModal({
   captions,
   isApplying,
   isOpen,
+  onAddCaption,
   onApply,
   onChangeCaption,
+  onChangePlacement,
+  onChangeStyle,
   onClose,
+  onDeleteCaption,
   onReset,
   onSave,
   outputVideoUrl,
@@ -45,7 +61,7 @@ export function SubtitleEditorModal({
               Subtitle Editor
             </h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Edit subtitle text and timings, then apply the changes to a new rendered output.
+              Edit captions, add missing lines, and set placement and style for manual rerenders.
             </p>
           </div>
 
@@ -62,7 +78,7 @@ export function SubtitleEditorModal({
           <div className="border-b border-zinc-800 p-5 xl:border-b-0 xl:border-r">
             <h3 className="text-sm font-semibold text-zinc-200">Preview</h3>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
-              Video reference for timing and wording checks.
+              Reference preview for timing and subtitle layout decisions.
             </p>
 
             <div className="mt-4 flex min-h-[420px] items-center justify-center rounded-3xl border border-zinc-800 bg-zinc-900 p-4">
@@ -79,6 +95,15 @@ export function SubtitleEditorModal({
                 </div>
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={onAddCaption}
+              disabled={isApplying}
+              className="mt-4 w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Add New Subtitle
+            </button>
           </div>
 
           <div className="min-h-0 overflow-y-auto p-5">
@@ -88,7 +113,7 @@ export function SubtitleEditorModal({
                   Subtitle Segments
                 </h3>
                 <p className="mt-1 text-xs leading-5 text-zinc-500">
-                  Update text and exact timing values. Timeline dragging comes later.
+                  Manual captions can overlap in time. Track and color fields prepare for multi-speaker layouts.
                 </p>
               </div>
 
@@ -103,16 +128,30 @@ export function SubtitleEditorModal({
                   key={`${caption.id}-${index}`}
                   className="rounded-3xl border border-zinc-800 bg-zinc-900 p-4"
                 >
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-                    <span className="rounded-full border border-zinc-700 px-2 py-1">
-                      #{index + 1}
-                    </span>
-                    <span className="rounded-full border border-zinc-700 px-2 py-1">
-                      {caption.status || "draft"}
-                    </span>
-                    <span className="rounded-full border border-zinc-700 px-2 py-1">
-                      {formatSeconds(caption.start)}s → {formatSeconds(caption.end)}s
-                    </span>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                      <span className="rounded-full border border-zinc-700 px-2 py-1">
+                        #{index + 1}
+                      </span>
+                      <span className="rounded-full border border-zinc-700 px-2 py-1">
+                        {caption.status || "draft"}
+                      </span>
+                      <span className="rounded-full border border-zinc-700 px-2 py-1">
+                        {caption.is_manual ? "manual" : "detected"}
+                      </span>
+                      <span className="rounded-full border border-zinc-700 px-2 py-1">
+                        {formatSeconds(caption.start)}s → {formatSeconds(caption.end)}s
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onDeleteCaption(caption.id)}
+                      disabled={isApplying}
+                      className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-200 transition hover:border-red-400 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Delete
+                    </button>
                   </div>
 
                   <div className="mt-4 grid gap-4 lg:grid-cols-[120px_120px_minmax(0,1fr)]">
@@ -125,11 +164,7 @@ export function SubtitleEditorModal({
                         step="0.01"
                         value={caption.start}
                         onChange={(event) =>
-                          onChangeCaption(
-                            index,
-                            "start",
-                            Number(event.target.value)
-                          )
+                          onChangeCaption(index, "start", Number(event.target.value))
                         }
                         className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
                       />
@@ -144,11 +179,7 @@ export function SubtitleEditorModal({
                         step="0.01"
                         value={caption.end}
                         onChange={(event) =>
-                          onChangeCaption(
-                            index,
-                            "end",
-                            Number(event.target.value)
-                          )
+                          onChangeCaption(index, "end", Number(event.target.value))
                         }
                         className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
                       />
@@ -169,6 +200,72 @@ export function SubtitleEditorModal({
                     </label>
                   </div>
 
+                  <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        Track
+                      </span>
+                      <select
+                        value={caption.placement.track}
+                        onChange={(event) =>
+                          onChangePlacement(index, "track", event.target.value)
+                        }
+                        className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
+                      >
+                        <option value="top">Top</option>
+                        <option value="bottom">Bottom</option>
+                        <option value="free">Free</option>
+                      </select>
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        Align
+                      </span>
+                      <select
+                        value={caption.placement.align}
+                        onChange={(event) =>
+                          onChangePlacement(index, "align", event.target.value)
+                        }
+                        className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
+                      >
+                        <option value="top">Top</option>
+                        <option value="middle">Middle</option>
+                        <option value="bottom">Bottom</option>
+                      </select>
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        Color
+                      </span>
+                      <input
+                        type="color"
+                        value={caption.style.color}
+                        onChange={(event) =>
+                          onChangeStyle(index, "color", event.target.value)
+                        }
+                        className="h-11 w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-2 py-2"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        Font Size
+                      </span>
+                      <input
+                        type="number"
+                        min={16}
+                        step={1}
+                        value={caption.style.font_size}
+                        onChange={(event) =>
+                          onChangeStyle(index, "font_size", Number(event.target.value))
+                        }
+                        className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
+                      />
+                    </label>
+                  </div>
+
                   <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
                     <p className="text-[11px] uppercase tracking-wide text-zinc-500">
                       Original Draft Reference
@@ -185,7 +282,7 @@ export function SubtitleEditorModal({
 
         <div className="flex flex-col gap-3 border-t border-zinc-800 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-zinc-500">
-            Save keeps your current draft in the editor. Apply will render a new subtitled output.
+            Save keeps your current draft. Apply renders a new subtitle version from the edited caption objects.
           </p>
 
           <div className="flex flex-wrap gap-3">

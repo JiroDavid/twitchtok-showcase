@@ -78,6 +78,49 @@ function toEditableCaptionDraft(
       caption.raw_text?.trim() ||
       "",
     status: caption.status ?? "draft",
+    is_manual: Boolean(caption.is_manual),
+    style: {
+      color: caption.style?.color ?? "#FFFFFF",
+      font_family: caption.style?.font_family ?? "Arial",
+      font_size: caption.style?.font_size ?? 54,
+    },
+    placement: {
+      track: caption.placement?.track ?? "bottom",
+      x: caption.placement?.x ?? null,
+      y: caption.placement?.y ?? null,
+      align: caption.placement?.align ?? "bottom",
+    },
+  };
+}
+
+function createNewCaptionDraft(
+  existingDrafts: EditableCaptionDraft[]
+): EditableCaptionDraft {
+  const nextId =
+    existingDrafts.length > 0
+      ? Math.max(...existingDrafts.map((item) => item.id)) + 1
+      : 1;
+
+  return {
+    id: nextId,
+    start: 0,
+    end: 2,
+    raw_text: "",
+    refined_text: "",
+    final_text: "",
+    status: "draft",
+    is_manual: true,
+    style: {
+      color: "#FFFFFF",
+      font_family: "Arial",
+      font_size: 54,
+    },
+    placement: {
+      track: "bottom",
+      x: null,
+      y: null,
+      align: "bottom",
+    },
   };
 }
 
@@ -161,10 +204,14 @@ export default function Home() {
   }, [subtitleRerenderResult, processResult]);
 
   const outputVideoUrl = useMemo(() => {
+    if (pipelineStage === "subtitle_rerender") {
+      return null;
+    }
+
     const outputUrl = activeOutputResult?.output_url;
     if (!outputUrl) return null;
     return `${API_BASE_URL}${outputUrl}`;
-  }, [activeOutputResult]);
+  }, [activeOutputResult, pipelineStage]);
 
   const metadataPayload = useMemo(() => {
     return processResult?.metadata?.payload;
@@ -629,12 +676,82 @@ export default function Home() {
         start,
         end,
         final_text: caption.final_text.trim(),
+        style: {
+          color: caption.style.color || "#FFFFFF",
+          font_family: caption.style.font_family || "Arial",
+          font_size:
+            Number.isFinite(caption.style.font_size) && caption.style.font_size > 0
+              ? caption.style.font_size
+              : 54,
+        },
+        placement: {
+          track: caption.placement.track ?? "bottom",
+          x:
+            typeof caption.placement.x === "number" &&
+            Number.isFinite(caption.placement.x)
+              ? caption.placement.x
+              : null,
+          y:
+            typeof caption.placement.y === "number" &&
+            Number.isFinite(caption.placement.y)
+              ? caption.placement.y
+              : null,
+          align: caption.placement.align ?? "bottom",
+        },
       };
     });
 
     setSavedSubtitleDrafts(sanitizedDrafts);
     setSubtitleDrafts(sanitizedDrafts);
     setIsSubtitleEditorOpen(false);
+  }
+
+  function addSubtitleDraft() {
+    setSubtitleDrafts((current) => [...current, createNewCaptionDraft(current)]);
+  }
+
+  function removeSubtitleDraft(id: number) {
+    setSubtitleDrafts((current) => current.filter((caption) => caption.id !== id));
+  }
+
+  function updateSubtitleStyle(
+    index: number,
+    field: "color" | "font_family" | "font_size",
+    value: string | number
+  ) {
+    setSubtitleDrafts((current) =>
+      current.map((caption, currentIndex) => {
+        if (currentIndex !== index) return caption;
+
+        return {
+          ...caption,
+          style: {
+            ...caption.style,
+            [field]: value,
+          },
+        };
+      })
+    );
+  }
+
+  function updateSubtitlePlacement(
+    index: number,
+    field: "track" | "x" | "y" | "align",
+    value: string | number | null
+  ) {
+    setSubtitleDrafts((current) =>
+      current.map((caption, currentIndex) => {
+        if (currentIndex !== index) return caption;
+
+        return {
+          ...caption,
+          placement: {
+            ...caption.placement,
+            [field]: value,
+          },
+        };
+      })
+    );
   }
 
   async function applySubtitleEdits() {
@@ -660,6 +777,28 @@ export default function Home() {
         start,
         end,
         final_text: caption.final_text.trim(),
+        style: {
+          color: caption.style.color || "#FFFFFF",
+          font_family: caption.style.font_family || "Arial",
+          font_size:
+            Number.isFinite(caption.style.font_size) && caption.style.font_size > 0
+              ? caption.style.font_size
+              : 54,
+        },
+        placement: {
+          track: caption.placement.track ?? "bottom",
+          x:
+            typeof caption.placement.x === "number" &&
+            Number.isFinite(caption.placement.x)
+              ? caption.placement.x
+              : null,
+          y:
+            typeof caption.placement.y === "number" &&
+            Number.isFinite(caption.placement.y)
+              ? caption.placement.y
+              : null,
+          align: caption.placement.align ?? "bottom",
+        },
       };
     });
 
@@ -1266,9 +1405,13 @@ export default function Home() {
         captions={subtitleDrafts}
         isApplying={isApplyingSubtitleEdits}
         isOpen={isSubtitleEditorOpen}
+        onAddCaption={addSubtitleDraft}
         onApply={applySubtitleEdits}
         onChangeCaption={updateSubtitleDraft}
+        onChangePlacement={updateSubtitlePlacement}
+        onChangeStyle={updateSubtitleStyle}
         onClose={closeSubtitleEditor}
+        onDeleteCaption={removeSubtitleDraft}
         onReset={resetSubtitleEditor}
         onSave={saveSubtitleEditor}
         outputVideoUrl={outputVideoUrl}
