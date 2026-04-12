@@ -36,6 +36,7 @@ import type {
   ProcessJobResult,
   SourceMode,
   StackedConfig,
+  SubtitleRerenderJobResult,
   TwitchClip,
   TwitchUser,
 } from "./types";
@@ -97,6 +98,12 @@ export default function Home() {
   const [processJobId, setProcessJobId] = useState<string | null>(null);
   const [processJobStatus, setProcessJobStatus] =
     useState<JobStatusResponse | null>(null);
+  const [subtitleRerenderJobId, setSubtitleRerenderJobId] = useState<
+    string | null
+  >(null);
+  const [subtitleRerenderJobStatus, setSubtitleRerenderJobStatus] =
+    useState<JobStatusResponse | null>(null);
+  const [isApplyingSubtitleEdits, setIsApplyingSubtitleEdits] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [pipelineStage, setPipelineStage] = useState<PipelineStage>("idle");
@@ -107,7 +114,8 @@ export default function Home() {
     useState<TwitchClip | null>(null);
   const [oauthStatus, setOauthStatus] = useState<string | null>(null);
   const [isCropEditorOpen, setIsCropEditorOpen] = useState(false);
-  const [cropDraft, setCropDraft] = useState<StackedConfig>(DEFAULT_STACKED_CONFIG);
+  const [cropDraft, setCropDraft] =
+    useState<StackedConfig>(DEFAULT_STACKED_CONFIG);
   const [videoNaturalSize, setVideoNaturalSize] = useState({
     width: 1920,
     height: 1080,
@@ -119,16 +127,19 @@ export default function Home() {
   const [dragState, setDragState] = useState<DragState>(null);
   const [cropEditorPreviewUrlOverride, setCropEditorPreviewUrlOverride] =
     useState<string | null>(null);
-  const [pendingCropProcessPath, setPendingCropProcessPath] =
-    useState<string | null>(null);
+  const [pendingCropProcessPath, setPendingCropProcessPath] = useState<
+    string | null
+  >(null);
   const [cropEditorRequiresConfirmation, setCropEditorRequiresConfirmation] =
     useState(false);
 
   const [isSubtitleEditorOpen, setIsSubtitleEditorOpen] = useState(false);
-  const [subtitleDrafts, setSubtitleDrafts] = useState<EditableCaptionDraft[]>([]);
-  const [savedSubtitleDrafts, setSavedSubtitleDrafts] = useState<EditableCaptionDraft[]>(
+  const [subtitleDrafts, setSubtitleDrafts] = useState<EditableCaptionDraft[]>(
     []
   );
+  const [savedSubtitleDrafts, setSavedSubtitleDrafts] = useState<
+    EditableCaptionDraft[]
+  >([]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
@@ -137,25 +148,36 @@ export default function Home() {
   const submittedLayoutRef = useRef<LayoutOption>(layout);
   const submittedSourceModeRef = useRef<SourceMode>(sourceMode);
 
-  const outputVideoUrl = useMemo(() => {
-    const result = processJobStatus?.result as ProcessJobResult | null;
-    const outputUrl = result?.output_url;
-
-    if (!outputUrl) return null;
-    return `${API_BASE_URL}${outputUrl}`;
-  }, [processJobStatus]);
-
   const processResult = useMemo(() => {
     return processJobStatus?.result as ProcessJobResult | null;
   }, [processJobStatus]);
+
+  const subtitleRerenderResult = useMemo(() => {
+    return subtitleRerenderJobStatus?.result as SubtitleRerenderJobResult | null;
+  }, [subtitleRerenderJobStatus]);
+
+  const activeOutputResult = useMemo(() => {
+    return subtitleRerenderResult ?? processResult;
+  }, [subtitleRerenderResult, processResult]);
+
+  const outputVideoUrl = useMemo(() => {
+    const outputUrl = activeOutputResult?.output_url;
+    if (!outputUrl) return null;
+    return `${API_BASE_URL}${outputUrl}`;
+  }, [activeOutputResult]);
 
   const metadataPayload = useMemo(() => {
     return processResult?.metadata?.payload;
   }, [processResult]);
 
   const generatedCaptionItems = useMemo(() => {
+    const rerenderItems = subtitleRerenderResult?.captions?.items ?? [];
+    if (rerenderItems.length > 0) {
+      return rerenderItems;
+    }
+
     return metadataPayload?.captions?.items ?? [];
-  }, [metadataPayload]);
+  }, [metadataPayload, subtitleRerenderResult]);
 
   const selectedDownloadedClip = useMemo(() => {
     return (
@@ -374,6 +396,8 @@ export default function Home() {
     setDownloadedPath(null);
     setProcessJobId(null);
     setProcessJobStatus(null);
+    setSubtitleRerenderJobId(null);
+    setSubtitleRerenderJobStatus(null);
     setCropEditorPreviewUrlOverride(null);
     setPendingCropProcessPath(null);
     setIsCropEditorOpen(false);
@@ -571,7 +595,18 @@ export default function Home() {
   }
 
   function openSubtitleEditor() {
+    const latestCaptionItems = generatedCaptionItems;
+
+    if (latestCaptionItems.length > 0) {
+      const nextDrafts = latestCaptionItems.map(toEditableCaptionDraft);
+      setSubtitleDrafts(nextDrafts);
+      setSavedSubtitleDrafts(nextDrafts);
+      setIsSubtitleEditorOpen(true);
+      return;
+    }
+
     if (savedSubtitleDrafts.length === 0) return;
+
     setSubtitleDrafts(savedSubtitleDrafts.map((caption) => ({ ...caption })));
     setIsSubtitleEditorOpen(true);
   }
@@ -600,6 +635,73 @@ export default function Home() {
     setSavedSubtitleDrafts(sanitizedDrafts);
     setSubtitleDrafts(sanitizedDrafts);
     setIsSubtitleEditorOpen(false);
+  }
+
+  async function applySubtitleEdits() {
+    const baseResult = processResult;
+    const inputVideoPath =
+      (baseResult as (ProcessJobResult & { base_output_path?: string }) | null)
+        ?.base_output_path ?? baseResult?.output_path;
+    const captionsJsonPath = baseResult?.captions?.captions_json_path;
+
+    if (!inputVideoPath || !captionsJsonPath) {
+      setRequestError(
+        "Subtitle rerender requires an existing processed video and captions JSON."
+      );
+      return;
+    }
+
+    const sanitizedDrafts = subtitleDrafts.map((caption) => {
+      const start = Number.isFinite(caption.start) ? Math.max(0, caption.start) : 0;
+      const end = Number.isFinite(caption.end) ? Math.max(start, caption.end) : start;
+
+      return {
+        ...caption,
+        start,
+        end,
+        final_text: caption.final_text.trim(),
+      };
+    });
+
+    setSavedSubtitleDrafts(sanitizedDrafts);
+    setSubtitleDrafts(sanitizedDrafts);
+    setIsApplyingSubtitleEdits(true);
+    setIsSubtitleEditorOpen(false);
+    setRequestError(null);
+    setPipelineStage("subtitle_rerender");
+    setPipelineMessage("Saving subtitle edits and starting rerender...");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/jobs/subtitle-rerender`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          input_video_path: inputVideoPath,
+          captions_json_path: captionsJsonPath,
+          items: sanitizedDrafts,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to create subtitle rerender job (${response.status}): ${errorText}`
+        );
+      }
+
+      const data: JobCreateResponse = await response.json();
+      setSubtitleRerenderJobId(data.job_id);
+      setSubtitleRerenderJobStatus(null);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown subtitle rerender error";
+      setRequestError(message);
+      setPipelineStage("failed");
+      setPipelineMessage("Subtitle rerender failed to start.");
+      setIsApplyingSubtitleEdits(false);
+    }
   }
 
   function updateSubtitleDraft(
@@ -847,9 +949,83 @@ export default function Home() {
   }, [processJobId]);
 
   useEffect(() => {
+    if (!subtitleRerenderJobId) return;
+
+    async function fetchSubtitleRerenderJobStatus() {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/jobs/${subtitleRerenderJobId}`
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `Failed to fetch subtitle rerender job status (${response.status}): ${errorText}`
+          );
+        }
+
+        const data: JobStatusResponse = await response.json();
+        setSubtitleRerenderJobStatus(data);
+
+        if (data.status === "queued") {
+          setPipelineStage("subtitle_rerender");
+          setPipelineMessage("Subtitle rerender queued...");
+        }
+
+        if (data.status === "processing") {
+          setPipelineStage("subtitle_rerender");
+          setPipelineMessage("Applying subtitle edits and rendering updated video...");
+        }
+
+        if (data.status === "completed") {
+          const result = data.result as SubtitleRerenderJobResult | null;
+          const updatedItems = result?.captions?.items ?? [];
+
+          if (updatedItems.length > 0) {
+            const nextDrafts = updatedItems.map(toEditableCaptionDraft);
+            setSavedSubtitleDrafts(nextDrafts);
+            setSubtitleDrafts(nextDrafts);
+          }
+
+          setPipelineStage("completed");
+          setPipelineMessage("Subtitle edits applied. Updated video is ready.");
+          setIsApplyingSubtitleEdits(false);
+          clearInterval(intervalId);
+        }
+
+        if (data.status === "failed") {
+          setPipelineStage("failed");
+          setPipelineMessage("Subtitle rerender failed.");
+          setIsApplyingSubtitleEdits(false);
+          clearInterval(intervalId);
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unknown subtitle rerender polling error";
+        setRequestError(message);
+        setPipelineStage("failed");
+        setPipelineMessage("Subtitle rerender polling failed.");
+        setIsApplyingSubtitleEdits(false);
+        clearInterval(intervalId);
+      }
+    }
+
+    const intervalId = setInterval(() => {
+      void fetchSubtitleRerenderJobStatus();
+    }, 2000);
+
+    void fetchSubtitleRerenderJobStatus();
+
+    return () => clearInterval(intervalId);
+  }, [subtitleRerenderJobId]);
+
+  useEffect(() => {
     if (
-      pipelineStage === "processing" &&
-      previousPipelineStageRef.current !== "processing"
+      (pipelineStage === "processing" ||
+        pipelineStage === "subtitle_rerender") &&
+      previousPipelineStageRef.current !== pipelineStage
     ) {
       outputPreviewRef.current?.scrollIntoView({
         behavior: "smooth",
@@ -871,6 +1047,8 @@ export default function Home() {
       ? "Waiting for crop..."
       : pipelineStage === "processing"
       ? "Processing..."
+      : pipelineStage === "subtitle_rerender"
+      ? "Applying subtitle edits..."
       : sourceMode === "twitch_clips"
       ? "Download Selected Clip and Process"
       : sourceMode === "twitch_url"
@@ -886,7 +1064,8 @@ export default function Home() {
         overallStatus === "downloading" ||
         overallStatus === "download_complete" ||
         overallStatus === "awaiting_crop" ||
-        overallStatus === "processing"
+        overallStatus === "processing" ||
+        overallStatus === "subtitle_rerender"
       ? "text-amber-400"
       : "text-zinc-300";
 
@@ -1085,7 +1264,9 @@ export default function Home() {
 
       <SubtitleEditorModal
         captions={subtitleDrafts}
+        isApplying={isApplyingSubtitleEdits}
         isOpen={isSubtitleEditorOpen}
+        onApply={applySubtitleEdits}
         onChangeCaption={updateSubtitleDraft}
         onClose={closeSubtitleEditor}
         onReset={resetSubtitleEditor}

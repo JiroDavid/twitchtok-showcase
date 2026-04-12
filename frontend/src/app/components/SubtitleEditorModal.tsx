@@ -4,7 +4,9 @@ import type { EditableCaptionDraft } from "../types";
 
 type SubtitleEditorModalProps = {
   captions: EditableCaptionDraft[];
+  isApplying: boolean;
   isOpen: boolean;
+  onApply: () => void;
   onChangeCaption: (
     index: number,
     field: "start" | "end" | "final_text",
@@ -23,7 +25,9 @@ function formatSeconds(value: number) {
 
 export function SubtitleEditorModal({
   captions,
+  isApplying,
   isOpen,
+  onApply,
   onChangeCaption,
   onClose,
   onReset,
@@ -41,7 +45,7 @@ export function SubtitleEditorModal({
               Subtitle Editor
             </h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Edit subtitle text and timings. This stage is frontend-only for now.
+              Edit subtitle text and timings, then apply the changes to a new rendered output.
             </p>
           </div>
 
@@ -84,7 +88,7 @@ export function SubtitleEditorModal({
                   Subtitle Segments
                 </h3>
                 <p className="mt-1 text-xs leading-5 text-zinc-500">
-                  Update text and exact timing values. Timeline dragging comes in a later step.
+                  Update text and exact timing values. Timeline dragging comes later.
                 </p>
               </div>
 
@@ -181,14 +185,15 @@ export function SubtitleEditorModal({
 
         <div className="flex flex-col gap-3 border-t border-zinc-800 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-zinc-500">
-            Save will only update the frontend draft state in this step.
+            Save keeps your current draft in the editor. Apply will render a new subtitled output.
           </p>
 
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
               onClick={onReset}
-              className="rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800"
+              disabled={isApplying}
+              className="rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Reset Changes
             </button>
@@ -196,7 +201,8 @@ export function SubtitleEditorModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800"
+              disabled={isApplying}
+              className="rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>
@@ -204,9 +210,19 @@ export function SubtitleEditorModal({
             <button
               type="button"
               onClick={onSave}
-              className="rounded-2xl border border-violet-500/40 bg-violet-500/20 px-4 py-2 text-sm font-medium text-violet-100 transition hover:border-violet-400 hover:bg-violet-500/30"
+              disabled={isApplying}
+              className="rounded-2xl border border-violet-500/40 bg-violet-500/20 px-4 py-2 text-sm font-medium text-violet-100 transition hover:border-violet-400 hover:bg-violet-500/30 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Save Subtitle Draft
+              Save Draft
+            </button>
+
+            <button
+              type="button"
+              onClick={onApply}
+              disabled={isApplying || captions.length === 0}
+              className="rounded-2xl border border-green-500/40 bg-green-500/20 px-4 py-2 text-sm font-medium text-green-100 transition hover:border-green-400 hover:bg-green-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isApplying ? "Applying..." : "Apply Edits & Re-render"}
             </button>
           </div>
         </div>

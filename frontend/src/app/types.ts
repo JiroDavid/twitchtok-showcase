@@ -35,31 +35,6 @@ export type ProcessCaptionRefinementResult = {
   error?: string;
 };
 
-export type ProcessCaptionsResult = {
-  enabled?: boolean;
-  burned_in?: boolean;
-  srt_path?: string;
-  srt_filename?: string;
-  srt_url?: string;
-  captions_json_path?: string;
-  captions_json_filename?: string;
-  captions_json_url?: string;
-  refinement?: ProcessCaptionRefinementResult | null;
-};
-
-export type ProcessRepresentativeFrameResult = {
-  frame_path?: string;
-  frame_filename?: string;
-  frame_url?: string;
-  source?: string;
-};
-
-export type ProcessMetadataArtifactResult = {
-  metadata_path?: string;
-  metadata_filename?: string;
-  metadata_url?: string;
-};
-
 export type MetadataJsonCaptionsEntry = {
   id?: number;
   start?: number;
@@ -81,6 +56,33 @@ export type EditableCaptionDraft = {
   refined_text: string;
   final_text: string;
   status: string;
+};
+
+export type ProcessCaptionsResult = {
+  enabled?: boolean;
+  burned_in?: boolean;
+  srt_path?: string;
+  srt_filename?: string;
+  srt_url?: string;
+  captions_json_path?: string;
+  captions_json_filename?: string;
+  captions_json_url?: string;
+  refinement?: ProcessCaptionRefinementResult | null;
+  items?: MetadataJsonCaptionsEntry[];
+  edited?: boolean;
+};
+
+export type ProcessRepresentativeFrameResult = {
+  frame_path?: string;
+  frame_filename?: string;
+  frame_url?: string;
+  source?: string;
+};
+
+export type ProcessMetadataArtifactResult = {
+  metadata_path?: string;
+  metadata_filename?: string;
+  metadata_url?: string;
 };
 
 export type MetadataJsonVisionNotes = {
@@ -160,6 +162,9 @@ export type ProcessJobResult = {
   filename?: string;
   layout?: string;
   output_url?: string;
+  base_output_path?: string;
+  base_output_url?: string;
+  base_filename?: string;
   captions?: ProcessCaptionsResult;
   representative_frame?: ProcessRepresentativeFrameResult;
   metadata?: ProcessMetadataArtifactResult & {
@@ -167,12 +172,19 @@ export type ProcessJobResult = {
   };
 };
 
+export type SubtitleRerenderJobResult = {
+  output_path?: string;
+  filename?: string;
+  output_url?: string;
+  captions?: ProcessCaptionsResult;
+};
+
 export type JobStatusResponse = {
   id: string;
   type: string;
   status: string;
   payload: Record<string, unknown>;
-  result: DownloadJobResult | ProcessJobResult | null;
+  result: DownloadJobResult | ProcessJobResult | SubtitleRerenderJobResult | null;
   error: string | null;
 };
 
@@ -236,5 +248,6 @@ export type PipelineStage =
   | "download_complete"
   | "awaiting_crop"
   | "processing"
+  | "subtitle_rerender"
   | "completed"
   | "failed";

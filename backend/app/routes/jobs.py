@@ -163,6 +163,10 @@ def process_video_job(
             stacked_config=stacked_config,
         )
 
+        result["base_output_path"] = result["output_path"]
+        result["base_output_url"] = result["output_url"]
+        result["base_filename"] = result["filename"]
+
         if captions_enabled and burn_in and captions_result:
             burned_output_filename = f"{stem}_{layout}_{short_job_id}_subtitled.mp4"
             burned_video = burn_subtitles_into_video(
