@@ -9,6 +9,8 @@ DEFAULT_WHISPER_MODEL = "small"
 DEFAULT_MAX_WORDS_PER_CHUNK = 3
 DEFAULT_SOFT_MAX_CHARS_PER_CHUNK = 14
 DEFAULT_TIME_PRECISION = 2
+ASS_PLAYRES_X = 1080
+ASS_PLAYRES_Y = 1920
 
 
 def _round_time(value: float, precision: int = DEFAULT_TIME_PRECISION) -> float:
@@ -21,6 +23,28 @@ def _format_srt_timestamp(seconds: float) -> str:
     minutes, remainder = divmod(remainder, 60_000)
     secs, milliseconds = divmod(remainder, 1000)
     return f"{hours:02}:{minutes:02}:{secs:02},{milliseconds:03}"
+
+
+def _format_ass_timestamp(seconds: float) -> str:
+    seconds = max(0.0, float(seconds))
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    centiseconds = int(round((seconds - int(seconds)) * 100))
+
+    if centiseconds == 100:
+        centiseconds = 0
+        secs += 1
+
+    if secs == 60:
+        secs = 0
+        minutes += 1
+
+    if minutes == 60:
+        minutes = 0
+        hours += 1
+
+    return f"{hours}:{minutes:02}:{secs:02}.{centiseconds:02}"
 
 
 def _clean_caption_text(text: str) -> str:
@@ -64,6 +88,11 @@ def _segments_to_srt(segments: list[dict]) -> str:
 def _write_srt_file(srt_path: Path, srt_content: str) -> None:
     srt_path.parent.mkdir(parents=True, exist_ok=True)
     srt_path.write_text(srt_content, encoding="utf-8")
+
+
+def _write_ass_file(ass_path: Path, ass_content: str) -> None:
+    ass_path.parent.mkdir(parents=True, exist_ok=True)
+    ass_path.write_text(ass_content, encoding="utf-8")
 
 
 def _write_json_file(json_path: Path, payload: dict) -> None:
@@ -204,6 +233,23 @@ def _word_chunks_to_srt(chunks: list[dict]) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
+def _default_caption_style() -> dict:
+    return {
+        "color": "#FFFFFF",
+        "font_family": "Arial",
+        "font_size": 54,
+    }
+
+
+def _default_caption_placement() -> dict:
+    return {
+        "track": "bottom",
+        "x": None,
+        "y": None,
+        "align": "bottom",
+    }
+
+
 def _segments_to_caption_items(segments: list[dict]) -> list[dict]:
     items: list[dict] = []
 
@@ -254,6 +300,9 @@ def _segments_to_caption_items(segments: list[dict]) -> list[dict]:
                 "refinement_source": None,
                 "status": "draft",
                 "words": segment_words,
+                "is_manual": False,
+                "style": _default_caption_style(),
+                "placement": _default_caption_placement(),
             }
         )
 
@@ -285,6 +334,9 @@ def _word_chunks_to_caption_items(chunks: list[dict]) -> list[dict]:
                 "refinement_source": None,
                 "status": "draft",
                 "words": chunk.get("words", []),
+                "is_manual": False,
+                "style": _default_caption_style(),
+                "placement": _default_caption_placement(),
             }
         )
 
@@ -321,6 +373,125 @@ def _caption_items_to_srt(caption_items: list[dict]) -> str:
             ]
         )
         written_index += 1
+
+    return "\n".join(lines).strip() + "\n"
+
+
+def _ass_escape_text(text: str) -> str:
+    text = text.replace("\\", r"\\")
+    text = text.replace("{", r"\{")
+    text = text.replace("}", r"\}")
+    text = text.replace("\n", r"\N")
+    return text
+
+
+def _hex_to_ass_bgr(hex_color: str) -> str:
+    value = (hex_color or "#FFFFFF").strip()
+    if value.startswith("#"):
+        value = value[1:]
+
+    if len(value) != 6:
+        value = "FFFFFF"
+
+    r = value[0:2]
+    g = value[2:4]
+    b = value[4:6]
+    return f"&H00{b}{g}{r}"
+
+
+def _resolve_ass_alignment(placement: dict) -> int:
+    track = placement.get("track", "bottom")
+    align = placement.get("align", "bottom")
+
+    if track == "top":
+        return 8
+    if track == "bottom":
+        return 2
+
+    if align == "top":
+        return 8
+    if align == "middle":
+        return 5
+    return 2
+
+
+def _resolve_ass_position_overrides(placement: dict) -> str:
+    x = placement.get("x")
+    y = placement.get("y")
+    track = placement.get("track", "bottom")
+
+    if isinstance(x, (int, float)) and isinstance(y, (int, float)):
+        return rf"\pos({int(round(x))},{int(round(y))})"
+
+    if track == "top":
+        return r"\pos(540,260)"
+    if track == "bottom":
+        return r"\pos(540,1660)"
+
+    align = placement.get("align", "bottom")
+    if align == "top":
+        return r"\pos(540,260)"
+    if align == "middle":
+        return r"\pos(540,960)"
+    return r"\pos(540,1660)"
+
+
+def _caption_items_to_ass(caption_items: list[dict]) -> str:
+    header = f"""[Script Info]
+ScriptType: v4.00+
+PlayResX: {ASS_PLAYRES_X}
+PlayResY: {ASS_PLAYRES_Y}
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,54,&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,3,0,2,60,60,60,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+
+    lines: list[str] = [header.rstrip()]
+
+    for item in caption_items:
+        text = _clean_caption_text(
+            str(
+                item.get("final_text")
+                or item.get("refined_text")
+                or item.get("raw_text")
+                or ""
+            )
+        )
+        if not text:
+            continue
+
+        start = float(item.get("start", 0.0))
+        end = float(item.get("end", start))
+        if end < start:
+            end = start
+
+        style = item.get("style") or {}
+        placement = item.get("placement") or {}
+
+        font_name = str(style.get("font_family") or "Arial")
+        font_size = int(style.get("font_size") or 54)
+        color = _hex_to_ass_bgr(str(style.get("color") or "#FFFFFF"))
+        alignment = _resolve_ass_alignment(placement)
+        pos_override = _resolve_ass_position_overrides(placement)
+
+        ass_text = _ass_escape_text(text)
+        override = (
+            rf"{{\fn{font_name}\fs{font_size}\c{color}\an{alignment}{pos_override}}}"
+        )
+
+        lines.append(
+            "Dialogue: 0,"
+            f"{_format_ass_timestamp(start)},"
+            f"{_format_ass_timestamp(end)},"
+            "Default,,0,0,0,,"
+            f"{override}{ass_text}"
+        )
 
     return "\n".join(lines).strip() + "\n"
 
@@ -389,6 +560,15 @@ def update_captions_payload_with_edits(
                 "refinement_source": existing_item.get("refinement_source"),
                 "status": "edited",
                 "words": existing_item.get("words", []),
+                "is_manual": bool(
+                    edited_item.get("is_manual", existing_item.get("is_manual", False))
+                ),
+                "style": edited_item.get("style")
+                or existing_item.get("style")
+                or _default_caption_style(),
+                "placement": edited_item.get("placement")
+                or existing_item.get("placement")
+                or _default_caption_placement(),
             }
         )
 
@@ -417,6 +597,28 @@ def write_srt_from_captions_json(
         "srt_path": str(srt_path),
         "srt_filename": srt_path.name,
         "srt_url": f"/storage/outputs/{srt_path.name}",
+    }
+
+
+def write_ass_from_captions_json(
+    captions_json_path: str,
+    output_filename: str | None = None,
+) -> dict:
+    json_path = Path(captions_json_path)
+    payload = load_captions_json(str(json_path))
+    caption_items = payload.get("captions") or []
+
+    if output_filename is None:
+        output_filename = f"{json_path.stem}.ass"
+
+    ass_path = OUTPUTS_DIR / output_filename
+    ass_content = _caption_items_to_ass(caption_items)
+    _write_ass_file(ass_path, ass_content)
+
+    return {
+        "ass_path": str(ass_path),
+        "ass_filename": ass_path.name,
+        "ass_url": f"/storage/outputs/{ass_path.name}",
     }
 
 

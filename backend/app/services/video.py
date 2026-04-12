@@ -52,14 +52,6 @@ def _build_cover_crop_filter(
     target_width: int,
     target_height: int,
 ) -> str:
-    """
-    Build an FFmpeg filter chain that:
-    1. crops the selected source region
-    2. scales it to cover the destination area while preserving aspect ratio
-    3. crops the overflow to the exact destination size
-
-    This removes black bars while avoiding stretching.
-    """
     return (
         f"crop={crop_box['w']}:{crop_box['h']}:{crop_box['x']}:{crop_box['y']},"
         f"scale={target_width}:{target_height}:force_original_aspect_ratio=increase,"
@@ -71,13 +63,6 @@ def extract_representative_frame(
     input_path: str,
     output_filename: str,
 ) -> dict:
-    """
-    Extract a single representative frame from the source clip.
-
-    This intentionally uses the original input video rather than the final
-    rendered/subtitled output so future vision analysis is based on clean
-    source imagery rather than subtitle overlays.
-    """
     input_file = Path(input_path)
 
     if not input_file.exists():
@@ -264,6 +249,7 @@ def burn_subtitles_into_video(
     input_video_path: str,
     subtitles_path: str,
     output_filename: str,
+    subtitle_format: str = "auto",
 ) -> dict:
     input_video = Path(input_video_path)
     subtitles_file = Path(subtitles_path)
@@ -275,7 +261,17 @@ def burn_subtitles_into_video(
         raise FileNotFoundError(f"Subtitle file not found: {subtitles_path}")
 
     output_path = OUTPUTS_DIR / output_filename
-    subtitles_filter = f"subtitles='{_escape_subtitles_filter_path(subtitles_file)}'"
+
+    resolved_format = subtitle_format
+    if resolved_format == "auto":
+        resolved_format = subtitles_file.suffix.lower().lstrip(".")
+
+    escaped_path = _escape_subtitles_filter_path(subtitles_file)
+
+    if resolved_format == "ass":
+        subtitle_filter = f"ass='{escaped_path}'"
+    else:
+        subtitle_filter = f"subtitles='{escaped_path}'"
 
     command = [
         "ffmpeg",
@@ -283,7 +279,7 @@ def burn_subtitles_into_video(
         "-i",
         str(input_video),
         "-vf",
-        subtitles_filter,
+        subtitle_filter,
         "-c:v",
         "libx264",
         "-preset",
@@ -297,7 +293,7 @@ def burn_subtitles_into_video(
         str(output_path),
     ]
 
-    _run_ffmpeg(command, "subtitle burn-in")
+    _run_ffmpeg(command, f"{resolved_format} subtitle burn-in")
 
     return {
         "output_path": str(output_path),

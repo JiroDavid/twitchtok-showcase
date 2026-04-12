@@ -210,7 +210,10 @@ export default function Home() {
 
     const outputUrl = activeOutputResult?.output_url;
     if (!outputUrl) return null;
-    return `${API_BASE_URL}${outputUrl}`;
+
+    return `${API_BASE_URL}${outputUrl}?t=${encodeURIComponent(
+      activeOutputResult?.filename ?? Date.now().toString()
+    )}`;
   }, [activeOutputResult, pipelineStage]);
 
   const metadataPayload = useMemo(() => {
@@ -949,7 +952,7 @@ export default function Home() {
 
           if (
             submittedLayout === "stacked" &&
-            submittedSourceMode !== "downloaded_file"
+            submittedSourceMode != "downloaded_file"
           ) {
             setSelectedDownloadedPath(path);
             setPipelineStage("awaiting_crop");

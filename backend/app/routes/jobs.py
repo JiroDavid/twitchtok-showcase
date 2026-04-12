@@ -26,6 +26,7 @@ from app.services.transcription import (
     save_captions_json,
     transcribe_video_to_srt,
     update_captions_payload_with_edits,
+    write_ass_from_captions_json,
     write_srt_from_captions_json,
 )
 from app.services.twitch_api import download_twitch_clip, extract_clip_slug
@@ -282,17 +283,26 @@ def process_subtitle_rerender_job(
         updated_payload = update_captions_payload_with_edits(captions_payload, items)
         saved_json_result = save_captions_json(captions_json_path, updated_payload)
 
-        srt_filename = f"{captions_json_file.stem}_edited.srt"
+        short_job_id = job_id.split("-")[0]
+
+        srt_filename = f"{captions_json_file.stem}_edited_{short_job_id}.srt"
         srt_result = write_srt_from_captions_json(
             captions_json_path=captions_json_path,
             output_filename=srt_filename,
         )
 
-        rerender_filename = f"{input_video.stem}_edited_subtitled.mp4"
+        ass_filename = f"{captions_json_file.stem}_edited_{short_job_id}.ass"
+        ass_result = write_ass_from_captions_json(
+            captions_json_path=captions_json_path,
+            output_filename=ass_filename,
+        )
+
+        rerender_filename = f"{input_video.stem}_edited_subtitled_{short_job_id}.mp4"
         rerender_result = burn_subtitles_into_video(
             input_video_path=input_video_path,
-            subtitles_path=srt_result["srt_path"],
+            subtitles_path=ass_result["ass_path"],
             output_filename=rerender_filename,
+            subtitle_format="ass",
         )
 
         result = {
@@ -305,6 +315,9 @@ def process_subtitle_rerender_job(
                 "srt_path": srt_result["srt_path"],
                 "srt_filename": srt_result["srt_filename"],
                 "srt_url": srt_result["srt_url"],
+                "ass_path": ass_result["ass_path"],
+                "ass_filename": ass_result["ass_filename"],
+                "ass_url": ass_result["ass_url"],
                 "captions_json_path": saved_json_result["captions_json_path"],
                 "captions_json_filename": saved_json_result["captions_json_filename"],
                 "captions_json_url": saved_json_result["captions_json_url"],
