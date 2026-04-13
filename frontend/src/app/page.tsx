@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  FormEvent,
   PointerEvent as ReactPointerEvent,
   useEffect,
   useMemo,
@@ -10,6 +9,7 @@ import {
 } from "react";
 
 import { AccountPanel } from "./components/AccountPanel";
+import { ConfigureHighlightModal } from "./components/ConfigureHighlightModal";
 import { CropEditorModal } from "./components/CropEditorModal";
 import { DownloadedFilesPanel } from "./components/DownloadedFilesPanel";
 import { EditorControlsPanel } from "./components/EditorControlsPanel";
@@ -27,6 +27,8 @@ import type {
   DragState,
   DragTarget,
   EditableCaptionDraft,
+  HighlightConfig,
+  HighlightFontOption,
   JobCreateResponse,
   JobStatusResponse,
   LayoutOption,
@@ -52,7 +54,7 @@ const DEFAULT_STACKED_CONFIG: StackedConfig = {
 
 const DEFAULT_SUBTITLE_STYLE = {
   color: "#FFFFFF",
-  font_family: "Arial",
+  font_family: "Arial" as HighlightFontOption,
   font_size: 140,
   outline: 8,
   shadow: 3,
@@ -63,6 +65,12 @@ const DEFAULT_SUBTITLE_PLACEMENT = {
   x: null,
   y: null,
   align: "bottom" as const,
+};
+
+const DEFAULT_HIGHLIGHT_CONFIG: HighlightConfig = {
+  layout: "cropped",
+  subtitle_style: { ...DEFAULT_SUBTITLE_STYLE },
+  censor_subtitles: false,
 };
 
 const SOURCE_MODE_LABELS: Record<SourceMode, string> = {
@@ -154,7 +162,8 @@ function toEditableCaptionDraft(
 }
 
 function createNewCaptionDraft(
-  existingDrafts: EditableCaptionDraft[]
+  existingDrafts: EditableCaptionDraft[],
+  baseStyle: HighlightConfig["subtitle_style"]
 ): EditableCaptionDraft {
   const nextId =
     existingDrafts.length > 0
@@ -170,7 +179,7 @@ function createNewCaptionDraft(
     final_text: "",
     status: "draft",
     is_manual: true,
-    style: { ...DEFAULT_SUBTITLE_STYLE },
+    style: { ...baseStyle },
     placement: { ...DEFAULT_SUBTITLE_PLACEMENT },
   };
 }
@@ -235,12 +244,24 @@ export default function Home() {
     EditableCaptionDraft[]
   >([]);
 
+  const [highlightConfig, setHighlightConfig] = useState<HighlightConfig>({
+    ...DEFAULT_HIGHLIGHT_CONFIG,
+  });
+  const [highlightConfigDraft, setHighlightConfigDraft] =
+    useState<HighlightConfig>({
+      ...DEFAULT_HIGHLIGHT_CONFIG,
+    });
+  const [isConfigureHighlightOpen, setIsConfigureHighlightOpen] = useState(false);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
   const outputPreviewRef = useRef<HTMLDivElement | null>(null);
   const previousPipelineStageRef = useRef<PipelineStage>("idle");
   const submittedLayoutRef = useRef<LayoutOption>(layout);
   const submittedSourceModeRef = useRef<SourceMode>(sourceMode);
+  const submittedHighlightConfigRef = useRef<HighlightConfig>({
+    ...DEFAULT_HIGHLIGHT_CONFIG,
+  });
 
   const processResult = useMemo(() => {
     return processJobStatus?.result as ProcessJobResult | null;
@@ -312,12 +333,12 @@ export default function Home() {
       box.h > 0
   );
 
-  function buildProcessRequestBody(inputPath: string) {
+  function buildProcessRequestBody(inputPath: string, config: HighlightConfig) {
     return {
       input_path: inputPath,
-      layout,
+      layout: config.layout,
       stacked_config:
-        layout === "stacked"
+        config.layout === "stacked"
           ? {
               top_crop: stackedConfig.top_crop,
               bottom_crop: stackedConfig.bottom_crop,
@@ -329,6 +350,14 @@ export default function Home() {
         burn_in: true,
         refine_with_llm: true,
         refinement_model: "llama3.1:8b",
+        censor_subtitles: config.censor_subtitles,
+        default_style: {
+          color: config.subtitle_style.color,
+          font_family: config.subtitle_style.font_family,
+          font_size: config.subtitle_style.font_size,
+          outline: config.subtitle_style.outline,
+          shadow: config.subtitle_style.shadow,
+        },
       },
       metadata: {
         enabled: true,
@@ -482,15 +511,32 @@ export default function Home() {
     setSavedSubtitleDrafts(nextDrafts);
   }, [generatedCaptionItems]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function openConfigureHighlight() {
+    setHighlightConfigDraft({
+      layout,
+      subtitle_style: {
+        ...highlightConfig.subtitle_style,
+      },
+      censor_subtitles: highlightConfig.censor_subtitles,
+    });
+    setIsConfigureHighlightOpen(true);
+  }
 
+  function closeConfigureHighlight() {
+    if (isSubmitting) return;
+    setIsConfigureHighlightOpen(false);
+  }
+
+  async function startConfiguredPipeline(config: HighlightConfig) {
     setIsSubmitting(true);
     setRequestError(null);
     setPipelineStage("submitting");
     setPipelineMessage("Preparing pipeline...");
-    submittedLayoutRef.current = layout;
+    submittedLayoutRef.current = config.layout;
     submittedSourceModeRef.current = sourceMode;
+    submittedHighlightConfigRef.current = config;
+    setLayout(config.layout);
+    setHighlightConfig(config);
 
     setDownloadJobId(null);
     setDownloadJobStatus(null);
@@ -505,7 +551,7 @@ export default function Home() {
     setIsSubtitleEditorOpen(false);
 
     try {
-      if (layout === "stacked" && !stackedConfigIsValid) {
+      if (config.layout === "stacked" && !stackedConfigIsValid) {
         throw new Error(
           "Crop boxes must use non-negative x/y values and positive width/height values."
         );
@@ -564,12 +610,19 @@ export default function Home() {
           throw new Error("Please select a downloaded file.");
         }
 
+        if (config.layout === "stacked") {
+          setPipelineStage("awaiting_crop");
+          setPipelineMessage("Confirm your stacked crop to continue.");
+          openCropEditor(undefined, selectedDownloadedPath);
+          return;
+        }
+
         const response = await fetch(`${API_BASE_URL}/jobs/process-video`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(buildProcessRequestBody(selectedDownloadedPath)),
+          body: JSON.stringify(buildProcessRequestBody(selectedDownloadedPath, config)),
         });
 
         if (!response.ok) {
@@ -593,6 +646,23 @@ export default function Home() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function confirmConfigureHighlight() {
+    const config: HighlightConfig = {
+      layout: highlightConfigDraft.layout,
+      subtitle_style: {
+        color: highlightConfigDraft.subtitle_style.color,
+        font_family: highlightConfigDraft.subtitle_style.font_family,
+        font_size: DEFAULT_SUBTITLE_STYLE.font_size,
+        outline: DEFAULT_SUBTITLE_STYLE.outline,
+        shadow: DEFAULT_SUBTITLE_STYLE.shadow,
+      },
+      censor_subtitles: false,
+    };
+
+    setIsConfigureHighlightOpen(false);
+    await startConfiguredPipeline(config);
   }
 
   function handleLoginWithTwitch() {
@@ -728,7 +798,10 @@ export default function Home() {
   }
 
   function addSubtitleDraft() {
-    setSubtitleDrafts((current) => [...current, createNewCaptionDraft(current)]);
+    setSubtitleDrafts((current) => [
+      ...current,
+      createNewCaptionDraft(current, highlightConfig.subtitle_style),
+    ]);
   }
 
   function removeSubtitleDraft(id: number) {
@@ -933,12 +1006,12 @@ export default function Home() {
             ? `${API_BASE_URL}/storage/downloads/${encodeURIComponent(filename)}`
             : null;
 
-          const submittedLayout = submittedLayoutRef.current;
+          const submittedLayout = submittedHighlightConfigRef.current.layout;
           const submittedSourceMode = submittedSourceModeRef.current;
 
           if (
             submittedLayout === "stacked" &&
-            submittedSourceMode != "downloaded_file"
+            submittedSourceMode !== "downloaded_file"
           ) {
             setSelectedDownloadedPath(path);
             setPipelineStage("awaiting_crop");
@@ -996,7 +1069,9 @@ export default function Home() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(buildProcessRequestBody(inputPath)),
+          body: JSON.stringify(
+            buildProcessRequestBody(inputPath, submittedHighlightConfigRef.current)
+          ),
         });
 
         if (!response.ok) {
@@ -1014,11 +1089,13 @@ export default function Home() {
             ? error.message
             : "Unknown process request error";
         setRequestError(message);
+        setPipelineStage("failed");
+        setPipelineMessage("Process request failed.");
       }
     }
 
     void startProcessJob();
-  }, [downloadedPath, layout, processJobId, stackedConfig]);
+  }, [downloadedPath, processJobId, stackedConfig]);
 
   useEffect(() => {
     if (!processJobId) return;
@@ -1177,11 +1254,7 @@ export default function Home() {
       ? "Processing..."
       : pipelineStage === "subtitle_rerender"
       ? "Applying subtitle edits..."
-      : sourceMode === "twitch_clips"
-      ? "Download Selected Clip and Process"
-      : sourceMode === "twitch_url"
-      ? "Download and Process URL"
-      : "Process Downloaded File";
+      : "Configure Highlight";
 
   const statusTone =
     overallStatus === "completed"
@@ -1252,6 +1325,7 @@ export default function Home() {
           <aside className="space-y-6">
             <EditorControlsPanel
               clipUrl={clipUrl}
+              currentHighlightConfig={highlightConfig}
               isSubmitting={isSubmitting}
               layout={layout}
               selectedDownloadedPath={selectedDownloadedPath}
@@ -1262,10 +1336,9 @@ export default function Home() {
               submitButtonLabel={submitButtonLabel}
               twitchUser={twitchUser}
               onClipUrlChange={setClipUrl}
-              onLayoutChange={setLayout}
+              onOpenConfigureHighlight={openConfigureHighlight}
               onOpenCropEditor={() => openCropEditor()}
               onSourceModeChange={setSourceMode}
-              onSubmit={handleSubmit}
             />
 
             <JobActivityPanel
@@ -1359,6 +1432,38 @@ export default function Home() {
           </section>
         </div>
       </div>
+
+      <ConfigureHighlightModal
+        draftConfig={highlightConfigDraft}
+        isOpen={isConfigureHighlightOpen}
+        isSubmitting={isSubmitting}
+        onChangeColor={(color) =>
+          setHighlightConfigDraft((current) => ({
+            ...current,
+            subtitle_style: {
+              ...current.subtitle_style,
+              color,
+            },
+          }))
+        }
+        onChangeFontFamily={(fontFamily) =>
+          setHighlightConfigDraft((current) => ({
+            ...current,
+            subtitle_style: {
+              ...current.subtitle_style,
+              font_family: fontFamily,
+            },
+          }))
+        }
+        onChangeLayout={(nextLayout) =>
+          setHighlightConfigDraft((current) => ({
+            ...current,
+            layout: nextLayout,
+          }))
+        }
+        onClose={closeConfigureHighlight}
+        onConfirm={confirmConfigureHighlight}
+      />
 
       <CropEditorModal
         bottomPreviewStyle={bottomPreviewStyle}

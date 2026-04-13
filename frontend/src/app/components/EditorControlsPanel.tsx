@@ -1,9 +1,7 @@
 "use client";
 
-import type { FormEvent } from "react";
-
 import type {
-  LayoutOption,
+  HighlightConfig,
   SourceMode,
   StackedConfig,
   TwitchClip,
@@ -12,8 +10,9 @@ import type {
 
 type EditorControlsPanelProps = {
   clipUrl: string;
+  currentHighlightConfig: HighlightConfig;
   isSubmitting: boolean;
-  layout: LayoutOption;
+  layout: HighlightConfig["layout"];
   selectedDownloadedPath: string;
   selectedTwitchClip: TwitchClip | null;
   sourceMode: SourceMode;
@@ -22,14 +21,14 @@ type EditorControlsPanelProps = {
   submitButtonLabel: string;
   twitchUser: TwitchUser | null;
   onClipUrlChange: (value: string) => void;
-  onLayoutChange: (value: LayoutOption) => void;
+  onOpenConfigureHighlight: () => void;
   onOpenCropEditor: () => void;
   onSourceModeChange: (value: SourceMode) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 };
 
 export function EditorControlsPanel({
   clipUrl,
+  currentHighlightConfig,
   isSubmitting,
   layout,
   selectedDownloadedPath,
@@ -40,17 +39,21 @@ export function EditorControlsPanel({
   submitButtonLabel,
   twitchUser,
   onClipUrlChange,
-  onLayoutChange,
+  onOpenConfigureHighlight,
   onOpenCropEditor,
   onSourceModeChange,
-  onSubmit,
 }: EditorControlsPanelProps) {
+  const canStart =
+    !(sourceMode === "twitch_clips" && !selectedTwitchClip) &&
+    !(sourceMode === "downloaded_file" && !selectedDownloadedPath) &&
+    !(layout === "stacked" && !stackedConfigIsValid);
+
   return (
     <section className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
       <div>
         <h2 className="text-xl font-semibold">Editor Controls</h2>
         <p className="mt-2 text-sm leading-6 text-zinc-400">
-          Choose a source, pick a layout, and start the render pipeline.
+          Choose a source, then open the quick highlight setup before starting the pipeline.
         </p>
       </div>
 
@@ -92,7 +95,7 @@ export function EditorControlsPanel({
         </button>
       </div>
 
-      <form onSubmit={onSubmit} className="mt-6 space-y-5">
+      <div className="mt-6 space-y-5">
         {sourceMode === "twitch_clips" ? (
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
             <div className="flex items-center justify-between gap-3">
@@ -171,38 +174,61 @@ export function EditorControlsPanel({
           </div>
         )}
 
-        <div>
-          <label
-            htmlFor="layout"
-            className="mb-2 block text-sm font-medium text-zinc-200"
-          >
-            Layout preset
-          </label>
-          <select
-            id="layout"
-            value={layout}
-            onChange={(event) => onLayoutChange(event.target.value as LayoutOption)}
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
-          >
-            <option value="cropped">cropped</option>
-            <option value="fullscreen">fullscreen</option>
-            <option value="stacked">stacked</option>
-          </select>
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-100">
+                Current Quick Highlight Setup
+              </h3>
+              <p className="mt-1 text-xs text-zinc-500">
+                These defaults will be applied before the first render.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300">
+              Layout:{" "}
+              <span className="font-semibold text-zinc-100">
+                {currentHighlightConfig.layout}
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300">
+              Font:{" "}
+              <span
+                className="font-semibold text-zinc-100"
+                style={{
+                  fontFamily: currentHighlightConfig.subtitle_style.font_family,
+                }}
+              >
+                {currentHighlightConfig.subtitle_style.font_family}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300">
+              <span>Subtitle Color</span>
+              <span
+                className="inline-block h-6 w-12 rounded-md border border-zinc-700"
+                style={{
+                  backgroundColor: currentHighlightConfig.subtitle_style.color,
+                }}
+              />
+            </div>
+          </div>
         </div>
 
         {layout === "stacked" && (
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
             <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-sm font-semibold text-zinc-100">
-                    Visual Stacked Crop Editor
-                  </h3>
-                  <p className="mt-1 text-xs text-zinc-500">
-                    Final export stays fixed at 1080×1920. This editor only chooses
-                    the source crop areas for the top and bottom stack.
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-sm font-semibold text-zinc-100">
+                  Visual Stacked Crop Editor
+                </h3>
+                <p className="mt-1 text-xs text-zinc-500">
+                  For stacked mode, Twitch sources auto-open crop setup after download.
+                  Downloaded files can still open the crop editor directly.
+                </p>
               </div>
 
               {sourceMode === "downloaded_file" ? (
@@ -216,9 +242,7 @@ export function EditorControlsPanel({
                 </button>
               ) : (
                 <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-xs text-zinc-400">
-                  Twitch clip and Twitch URL stacked flows now auto-open the crop
-                  editor after download. Downloaded File mode can still open the crop
-                  editor directly.
+                  Crop setup will appear automatically after download for this source.
                 </div>
               )}
 
@@ -238,24 +262,20 @@ export function EditorControlsPanel({
         {layout !== "stacked" && (
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-4 text-xs text-zinc-400">
             {sourceMode === "downloaded_file"
-              ? "Downloaded files can be processed directly without any extra download step."
-              : "Cropped and fullscreen modes will process automatically after download."}
+              ? "Downloaded files can process immediately after highlight configuration."
+              : "After confirmation, the selected Twitch source will download and continue through the pipeline automatically."}
           </div>
         )}
 
         <button
-          type="submit"
-          disabled={
-            isSubmitting ||
-            (sourceMode === "twitch_clips" && !selectedTwitchClip) ||
-            (sourceMode === "downloaded_file" && !selectedDownloadedPath) ||
-            (layout === "stacked" && !stackedConfigIsValid)
-          }
+          type="button"
+          onClick={onOpenConfigureHighlight}
+          disabled={!canStart || isSubmitting}
           className="w-full rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitButtonLabel}
         </button>
-      </form>
+      </div>
     </section>
   );
 }

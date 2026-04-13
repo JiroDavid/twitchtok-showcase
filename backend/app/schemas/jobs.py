@@ -20,11 +20,21 @@ class StackedConfig(BaseModel):
     split_ratio_top: float = Field(default=0.4, ge=0.2, le=0.8)
 
 
+class CaptionStyle(BaseModel):
+    color: str = "#FFFFFF"
+    font_family: str = "Arial"
+    font_size: int = 140
+    outline: float = 8
+    shadow: float = 3
+
+
 class CaptionConfig(BaseModel):
     enabled: bool = False
     burn_in: bool = True
     refine_with_llm: bool = False
     refinement_model: Optional[str] = None
+    censor_subtitles: bool = False
+    default_style: Optional[CaptionStyle] = None
 
 
 class MetadataConfig(BaseModel):
@@ -39,12 +49,6 @@ class VideoProcessJobRequest(BaseModel):
     stacked_config: Optional[StackedConfig] = None
     captions: Optional[CaptionConfig] = None
     metadata: Optional[MetadataConfig] = None
-
-
-class CaptionStyle(BaseModel):
-    color: str = "#FFFFFF"
-    font_family: str = "Arial"
-    font_size: int = 54
 
 
 class CaptionPlacement(BaseModel):

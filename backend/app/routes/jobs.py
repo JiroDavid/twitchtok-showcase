@@ -40,6 +40,33 @@ from app.services.vision_analysis import DEFAULT_VISION_MODEL, generate_vision_n
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
+def _apply_default_caption_style(
+    captions_json_path: str,
+    default_style: dict | None,
+) -> list[dict]:
+    if not default_style:
+        payload = load_captions_json(captions_json_path)
+        return payload.get("captions", [])
+
+    payload = load_captions_json(captions_json_path)
+    updated_items: list[dict] = []
+
+    for item in payload.get("captions", []):
+        merged_item = dict(item)
+        existing_style = dict(item.get("style") or {})
+
+        for key, value in default_style.items():
+            if value is not None:
+                existing_style[key] = value
+
+        merged_item["style"] = existing_style
+        updated_items.append(merged_item)
+
+    payload["captions"] = updated_items
+    save_captions_json(captions_json_path, payload)
+    return updated_items
+
+
 def process_clip_download_job(job_id: str, clip_url: str) -> None:
     print(f"[jobs] Starting clip download job: job_id={job_id}, clip_url={clip_url}")
 
@@ -57,6 +84,7 @@ def process_clip_download_job(job_id: str, clip_url: str) -> None:
                 "download_path": result["download_path"],
                 "filename": result["filename"],
                 "source_type": "twitch_clip",
+                "download_url": result.get("download_url"),
             },
         )
 
@@ -95,6 +123,10 @@ def process_video_job(
         burn_in = True if not captions else bool(captions.get("burn_in", True))
         refine_with_llm = bool(captions and captions.get("refine_with_llm"))
         refinement_model = captions.get("refinement_model") if captions else None
+        censor_subtitles = bool(captions.get("censor_subtitles")) if captions else False
+        default_caption_style = (
+            captions.get("default_style") if captions else None
+        )
 
         metadata_enabled = True if not metadata else bool(metadata.get("enabled", True))
         vision_model = metadata.get("vision_model") if metadata else None
@@ -112,6 +144,8 @@ def process_video_job(
                 "burn_in": burn_in,
                 "refine_with_llm": refine_with_llm,
                 "refinement_model": refinement_model,
+                "censor_subtitles": censor_subtitles,
+                "default_style": default_caption_style,
             },
             "metadata": {
                 "enabled": metadata_enabled,
@@ -123,39 +157,66 @@ def process_video_job(
         captions_result = None
 
         if captions_enabled:
-            srt_filename = f"{stem}_{layout}_{short_job_id}.srt"
+            transcription_srt_filename = f"{stem}_{layout}_{short_job_id}.srt"
             transcription_result = transcribe_video_to_srt(
                 input_path=input_path,
-                output_filename=srt_filename,
+                output_filename=transcription_srt_filename,
             )
 
-            captions_result = {
-                "enabled": True,
-                "burned_in": False,
-                "srt_path": transcription_result["srt_path"],
-                "srt_filename": transcription_result["srt_filename"],
-                "srt_url": f"/storage/outputs/{transcription_result['srt_filename']}",
-                "captions_json_path": transcription_result["captions_json_path"],
-                "captions_json_filename": transcription_result["captions_json_filename"],
-                "captions_json_url": f"/storage/outputs/{transcription_result['captions_json_filename']}",
-            }
+            captions_json_path = transcription_result["captions_json_path"]
 
             if refine_with_llm:
                 try:
                     refinement_result = refine_captions_json(
-                        captions_json_path=transcription_result["captions_json_path"],
+                        captions_json_path=captions_json_path,
                         model_name=refinement_model,
                     )
-                    captions_result["refinement"] = refinement_result
                 except Exception as exc:
                     print(
                         f"[jobs] Caption refinement failed: job_id={job_id}, error={exc}"
                     )
-                    captions_result["refinement"] = {
+                    refinement_result = {
                         "applied": False,
                         "model": refinement_model or "llama3:8b",
                         "error": str(exc),
                     }
+            else:
+                refinement_result = None
+
+            _apply_default_caption_style(
+                captions_json_path=captions_json_path,
+                default_style=default_caption_style,
+            )
+
+            srt_filename = f"{stem}_{layout}_{short_job_id}_styled.srt"
+            srt_result = write_srt_from_captions_json(
+                captions_json_path=captions_json_path,
+                output_filename=srt_filename,
+            )
+
+            ass_filename = f"{stem}_{layout}_{short_job_id}_styled.ass"
+            ass_result = write_ass_from_captions_json(
+                captions_json_path=captions_json_path,
+                output_filename=ass_filename,
+            )
+
+            current_captions_payload = load_captions_json(captions_json_path)
+
+            captions_result = {
+                "enabled": True,
+                "burned_in": False,
+                "srt_path": srt_result["srt_path"],
+                "srt_filename": srt_result["srt_filename"],
+                "srt_url": srt_result["srt_url"],
+                "ass_path": ass_result["ass_path"],
+                "ass_filename": ass_result["ass_filename"],
+                "ass_url": ass_result["ass_url"],
+                "captions_json_path": captions_json_path,
+                "captions_json_filename": Path(captions_json_path).name,
+                "captions_json_url": f"/storage/outputs/{Path(captions_json_path).name}",
+                "refinement": refinement_result,
+                "items": current_captions_payload.get("captions", []),
+            }
 
         result = process_video_to_vertical(
             input_path=input_path,
@@ -172,8 +233,9 @@ def process_video_job(
             burned_output_filename = f"{stem}_{layout}_{short_job_id}_subtitled.mp4"
             burned_video = burn_subtitles_into_video(
                 input_video_path=result["output_path"],
-                subtitles_path=captions_result["srt_path"],
+                subtitles_path=captions_result["ass_path"],
                 output_filename=burned_output_filename,
+                subtitle_format="ass",
             )
             result["output_path"] = burned_video["output_path"]
             result["filename"] = burned_video["filename"]

@@ -1,6 +1,14 @@
 export type LayoutOption = "cropped" | "fullscreen" | "stacked";
 export type SourceMode = "twitch_clips" | "twitch_url" | "downloaded_file";
 
+export type HighlightFontOption =
+  | "Montserrat"
+  | "Gibson"
+  | "Barlow Condensed"
+  | "Komika Axis"
+  | "Futura"
+  | "Arial";
+
 export type CropBox = {
   x: number;
   y: number;
@@ -51,6 +59,18 @@ export type CaptionPlacement = {
   x?: number | null;
   y?: number | null;
   align?: CaptionAlign;
+};
+
+export type HighlightConfig = {
+  layout: LayoutOption;
+  subtitle_style: {
+    color: string;
+    font_family: HighlightFontOption;
+    font_size: number;
+    outline: number;
+    shadow: number;
+  };
+  censor_subtitles: boolean;
 };
 
 export type MetadataJsonCaptionsEntry = {
@@ -152,6 +172,8 @@ export type MetadataJsonPayload = {
       burn_in?: boolean;
       refine_with_llm?: boolean;
       refinement_model?: string | null;
+      censor_subtitles?: boolean;
+      default_style?: CaptionStyle | null;
     };
     metadata?: {
       enabled?: boolean;
