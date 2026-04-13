@@ -15,7 +15,6 @@ type ConfigureHighlightModalProps = {
 
 const FONT_OPTIONS: Array<{
   label: HighlightFontOption;
-  previewClassName?: string;
 }> = [
   { label: "Montserrat" },
   { label: "Gibson" },
@@ -32,6 +31,33 @@ const COLOR_OPTIONS = [
   "#3F74C8",
   "#28A84A",
 ];
+
+function PhoneFramePreview({
+  layout,
+}: {
+  layout: LayoutOption;
+}) {
+  return (
+    <div className="flex items-center justify-center">
+      <div className="relative h-24 w-14 rounded-[14px] border border-zinc-500 bg-black shadow-inner">
+        <div className="absolute left-1/2 top-[5px] h-[4px] w-[22px] -translate-x-1/2 rounded-full bg-zinc-500/80" />
+
+        <div className="absolute inset-[5px] overflow-hidden rounded-[10px] border border-zinc-700 bg-black">
+          {layout === "fullscreen" ? (
+            <div className="absolute left-1/2 top-1/2 h-[42px] w-[28px] -translate-x-1/2 -translate-y-1/2 rounded-[3px] bg-blue-500/90" />
+          ) : layout === "stacked" ? (
+            <>
+              <div className="absolute left-[3px] right-[3px] top-[3px] h-[30%] rounded-[3px] bg-red-500/90" />
+              <div className="absolute left-[3px] right-[3px] bottom-[3px] top-[calc(3px+30%+2px)] rounded-[3px] bg-blue-500/90" />
+            </>
+          ) : (
+            <div className="absolute inset-[3px] rounded-[3px] bg-blue-500/90" />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function LayoutPreviewCard({
   layout,
@@ -53,29 +79,14 @@ function LayoutPreviewCard({
     <button
       type="button"
       onClick={onClick}
-      className={`group rounded-2xl border p-4 transition ${
+      className={`group rounded-2xl border p-5 transition ${
         isSelected
           ? "border-zinc-100 bg-zinc-900 shadow-[0_0_0_1px_rgba(255,255,255,0.35)]"
           : "border-zinc-800 bg-black hover:border-zinc-600"
       }`}
     >
-      <div className="flex flex-col items-center gap-3">
-        <div className="flex h-28 w-20 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-950">
-          {layout === "fullscreen" ? (
-            <div className="relative h-20 w-10 rounded-md border border-zinc-500 bg-blue-500/90">
-              <div className="absolute left-1 top-1 h-4 w-8 rounded-sm bg-zinc-900/90" />
-            </div>
-          ) : layout === "stacked" ? (
-            <div className="relative h-20 w-10 rounded-md border border-zinc-500 bg-blue-500/90">
-              <div className="absolute left-1 top-1 h-4 w-8 rounded-sm bg-red-500/90" />
-            </div>
-          ) : (
-            <div className="relative h-20 w-10 rounded-md border border-zinc-500 bg-blue-500/90">
-              <div className="absolute left-[3px] top-1 h-[72px] w-[34px] rounded-sm border-2 border-zinc-200/90" />
-            </div>
-          )}
-        </div>
-
+      <div className="flex flex-col items-center gap-4">
+        <PhoneFramePreview layout={layout} />
         <span className="text-sm font-semibold text-zinc-100">{label}</span>
       </div>
     </button>
