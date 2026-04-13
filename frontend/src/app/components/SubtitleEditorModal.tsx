@@ -313,24 +313,27 @@ export function SubtitleEditorModal({
                       />
                     </label>
 
-                    <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-3">
+                    <div className="min-w-0 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-3">
                       <p className="text-[11px] uppercase tracking-wide text-zinc-500">
                         Style Preview
                       </p>
-                      <p
-                        className="mt-2 text-center font-semibold"
-                        style={{
-                          color: caption.style.color,
-                          fontFamily: caption.style.font_family,
-                          fontSize: `${Math.min(caption.style.font_size, 48)}px`,
-                          textShadow: `
-                            0 0 ${Math.max(1, caption.style.shadow)}px rgba(0,0,0,0.95),
-                            0 0 ${Math.max(1, caption.style.outline)}px rgba(0,0,0,0.95)
-                          `,
-                        }}
-                      >
-                        {caption.final_text || "Preview"}
-                      </p>
+                      <div className="mt-2 flex min-h-[92px] items-center justify-center overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-3 text-center">
+                        <p
+                          className="max-w-full overflow-hidden text-center font-semibold break-words whitespace-pre-wrap [overflow-wrap:anywhere]"
+                          style={{
+                            color: caption.style.color,
+                            fontFamily: caption.style.font_family,
+                            fontSize: `${Math.min(caption.style.font_size, 40)}px`,
+                            lineHeight: 1.15,
+                            textShadow: `
+                              0 0 ${Math.max(1, caption.style.shadow)}px rgba(0,0,0,0.95),
+                              0 0 ${Math.max(1, caption.style.outline)}px rgba(0,0,0,0.95)
+                            `,
+                          }}
+                        >
+                          {caption.final_text || "Preview"}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -338,7 +341,7 @@ export function SubtitleEditorModal({
                     <p className="text-[11px] uppercase tracking-wide text-zinc-500">
                       Original Draft Reference
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    <p className="mt-2 break-words text-sm leading-6 text-zinc-400 [overflow-wrap:anywhere]">
                       {caption.refined_text || caption.raw_text || "No original text available."}
                     </p>
                   </div>

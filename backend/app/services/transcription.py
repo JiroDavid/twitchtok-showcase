@@ -18,6 +18,14 @@ DEFAULT_CAPTION_FONT_SIZE = 140
 DEFAULT_CAPTION_OUTLINE = 8
 DEFAULT_CAPTION_SHADOW = 3
 
+ASS_SAFE_WIDTH_RATIO = 0.84
+ASS_MAX_LINES = 4
+ASS_LONG_CAPTION_FONT_SCALE_STEP = 0.88
+ASS_MIN_FONT_SIZE = 56
+ASS_MIN_WRAP_CHARS = 12
+ASS_MAX_WRAP_CHARS = 28
+ASS_SKIP_WRAP_IF_TEXT_CHARS_AT_OR_BELOW = 22
+
 
 def _round_time(value: float, precision: int = DEFAULT_TIME_PRECISION) -> float:
     return round(float(value), precision)
@@ -458,11 +466,16 @@ def _caption_items_to_srt(caption_items: list[dict]) -> str:
 
 
 def _ass_escape_text(text: str) -> str:
-    text = text.replace("\\", r"\\")
-    text = text.replace("{", r"\{")
-    text = text.replace("}", r"\}")
-    text = text.replace("\n", r"\N")
-    return text
+    parts = text.split(r"\N")
+    escaped_parts: list[str] = []
+
+    for part in parts:
+        escaped = part.replace("\\", r"\\")
+        escaped = escaped.replace("{", r"\{")
+        escaped = escaped.replace("}", r"\}")
+        escaped_parts.append(escaped)
+
+    return r"\N".join(escaped_parts)
 
 
 def _hex_to_ass_bgr(hex_color: str) -> str:
@@ -516,6 +529,75 @@ def _resolve_ass_position_overrides(placement: dict) -> str:
     return r"\pos(540,1660)"
 
 
+def _estimate_wrap_chars(font_size: int) -> int:
+    safe_width = ASS_PLAYRES_X * ASS_SAFE_WIDTH_RATIO
+    estimated_char_width = max(font_size * 0.5, 1)
+    wrap_chars = int(safe_width / estimated_char_width)
+    return max(ASS_MIN_WRAP_CHARS, min(wrap_chars, ASS_MAX_WRAP_CHARS))
+
+
+def _wrap_long_word(word: str, max_piece_length: int) -> list[str]:
+    if len(word) <= max_piece_length:
+        return [word]
+
+    pieces: list[str] = []
+    start = 0
+    while start < len(word):
+        pieces.append(word[start : start + max_piece_length])
+        start += max_piece_length
+    return pieces
+
+
+def _wrap_caption_text_for_ass(
+    text: str,
+    font_size: int,
+    max_lines: int = ASS_MAX_LINES,
+) -> tuple[str, int]:
+    cleaned_text = _clean_caption_text(text)
+    if not cleaned_text:
+        return "", font_size
+
+    if len(cleaned_text) <= ASS_SKIP_WRAP_IF_TEXT_CHARS_AT_OR_BELOW:
+        return cleaned_text, font_size
+
+    adjusted_font_size = font_size
+
+    while True:
+        wrap_chars = _estimate_wrap_chars(adjusted_font_size)
+        words = cleaned_text.split()
+        lines: list[str] = []
+        current_line = ""
+
+        for word in words:
+            pieces = _wrap_long_word(word, wrap_chars)
+
+            for piece in pieces:
+                proposed = piece if not current_line else f"{current_line} {piece}"
+
+                if len(proposed) <= wrap_chars:
+                    current_line = proposed
+                else:
+                    if current_line:
+                        lines.append(current_line)
+                    current_line = piece
+
+        if current_line:
+            lines.append(current_line)
+
+        if len(lines) <= max_lines:
+            return r"\N".join(lines), adjusted_font_size
+
+        next_font_size = max(
+            ASS_MIN_FONT_SIZE,
+            int(round(adjusted_font_size * ASS_LONG_CAPTION_FONT_SCALE_STEP)),
+        )
+
+        if next_font_size == adjusted_font_size or next_font_size <= ASS_MIN_FONT_SIZE:
+            return r"\N".join(lines), next_font_size
+
+        adjusted_font_size = next_font_size
+
+
 def _caption_items_to_ass(caption_items: list[dict]) -> str:
     default_style = _default_caption_style()
 
@@ -564,11 +646,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         alignment = _resolve_ass_alignment(placement)
         pos_override = _resolve_ass_position_overrides(placement)
 
-        ass_text = _ass_escape_text(text)
+        wrapped_text, adjusted_font_size = _wrap_caption_text_for_ass(text, font_size)
+        ass_text = _ass_escape_text(wrapped_text)
+
         override = (
             "{"
             rf"\fn{font_name}"
-            rf"\fs{font_size}"
+            rf"\fs{adjusted_font_size}"
             rf"\c{color}"
             rf"\bord{outline}"
             rf"\shad{shadow}"
