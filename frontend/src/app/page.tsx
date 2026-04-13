@@ -50,6 +50,21 @@ const DEFAULT_STACKED_CONFIG: StackedConfig = {
   split_ratio_top: 0.4,
 };
 
+const DEFAULT_SUBTITLE_STYLE = {
+  color: "#FFFFFF",
+  font_family: "Arial",
+  font_size: 140,
+  outline: 8,
+  shadow: 3,
+};
+
+const DEFAULT_SUBTITLE_PLACEMENT = {
+  track: "bottom" as const,
+  x: null,
+  y: null,
+  align: "bottom" as const,
+};
+
 const SOURCE_MODE_LABELS: Record<SourceMode, string> = {
   twitch_clips: "Twitch Clips",
   twitch_url: "Twitch Clip URL",
@@ -61,6 +76,48 @@ const LAYOUT_LABELS: Record<LayoutOption, string> = {
   fullscreen: "Fullscreen",
   stacked: "Stacked",
 };
+
+function sanitizeCaptionDraft(caption: EditableCaptionDraft): EditableCaptionDraft {
+  const start = Number.isFinite(caption.start) ? Math.max(0, caption.start) : 0;
+  const end = Number.isFinite(caption.end) ? Math.max(start, caption.end) : start;
+
+  return {
+    ...caption,
+    start,
+    end,
+    final_text: caption.final_text.trim(),
+    style: {
+      color: caption.style.color || DEFAULT_SUBTITLE_STYLE.color,
+      font_family: caption.style.font_family || DEFAULT_SUBTITLE_STYLE.font_family,
+      font_size:
+        Number.isFinite(caption.style.font_size) && caption.style.font_size > 0
+          ? caption.style.font_size
+          : DEFAULT_SUBTITLE_STYLE.font_size,
+      outline:
+        Number.isFinite(caption.style.outline) && caption.style.outline >= 0
+          ? caption.style.outline
+          : DEFAULT_SUBTITLE_STYLE.outline,
+      shadow:
+        Number.isFinite(caption.style.shadow) && caption.style.shadow >= 0
+          ? caption.style.shadow
+          : DEFAULT_SUBTITLE_STYLE.shadow,
+    },
+    placement: {
+      track: caption.placement.track ?? DEFAULT_SUBTITLE_PLACEMENT.track,
+      x:
+        typeof caption.placement.x === "number" &&
+        Number.isFinite(caption.placement.x)
+          ? caption.placement.x
+          : null,
+      y:
+        typeof caption.placement.y === "number" &&
+        Number.isFinite(caption.placement.y)
+          ? caption.placement.y
+          : null,
+      align: caption.placement.align ?? DEFAULT_SUBTITLE_PLACEMENT.align,
+    },
+  };
+}
 
 function toEditableCaptionDraft(
   caption: MetadataJsonCaptionsEntry,
@@ -80,15 +137,18 @@ function toEditableCaptionDraft(
     status: caption.status ?? "draft",
     is_manual: Boolean(caption.is_manual),
     style: {
-      color: caption.style?.color ?? "#FFFFFF",
-      font_family: caption.style?.font_family ?? "Arial",
-      font_size: caption.style?.font_size ?? 54,
+      color: caption.style?.color ?? DEFAULT_SUBTITLE_STYLE.color,
+      font_family:
+        caption.style?.font_family ?? DEFAULT_SUBTITLE_STYLE.font_family,
+      font_size: caption.style?.font_size ?? DEFAULT_SUBTITLE_STYLE.font_size,
+      outline: caption.style?.outline ?? DEFAULT_SUBTITLE_STYLE.outline,
+      shadow: caption.style?.shadow ?? DEFAULT_SUBTITLE_STYLE.shadow,
     },
     placement: {
-      track: caption.placement?.track ?? "bottom",
-      x: caption.placement?.x ?? null,
-      y: caption.placement?.y ?? null,
-      align: caption.placement?.align ?? "bottom",
+      track: caption.placement?.track ?? DEFAULT_SUBTITLE_PLACEMENT.track,
+      x: caption.placement?.x ?? DEFAULT_SUBTITLE_PLACEMENT.x,
+      y: caption.placement?.y ?? DEFAULT_SUBTITLE_PLACEMENT.y,
+      align: caption.placement?.align ?? DEFAULT_SUBTITLE_PLACEMENT.align,
     },
   };
 }
@@ -110,17 +170,8 @@ function createNewCaptionDraft(
     final_text: "",
     status: "draft",
     is_manual: true,
-    style: {
-      color: "#FFFFFF",
-      font_family: "Arial",
-      font_size: 54,
-    },
-    placement: {
-      track: "bottom",
-      x: null,
-      y: null,
-      align: "bottom",
-    },
+    style: { ...DEFAULT_SUBTITLE_STYLE },
+    placement: { ...DEFAULT_SUBTITLE_PLACEMENT },
   };
 }
 
@@ -670,40 +721,7 @@ export default function Home() {
   }
 
   function saveSubtitleEditor() {
-    const sanitizedDrafts = subtitleDrafts.map((caption) => {
-      const start = Number.isFinite(caption.start) ? Math.max(0, caption.start) : 0;
-      const end = Number.isFinite(caption.end) ? Math.max(start, caption.end) : start;
-
-      return {
-        ...caption,
-        start,
-        end,
-        final_text: caption.final_text.trim(),
-        style: {
-          color: caption.style.color || "#FFFFFF",
-          font_family: caption.style.font_family || "Arial",
-          font_size:
-            Number.isFinite(caption.style.font_size) && caption.style.font_size > 0
-              ? caption.style.font_size
-              : 54,
-        },
-        placement: {
-          track: caption.placement.track ?? "bottom",
-          x:
-            typeof caption.placement.x === "number" &&
-            Number.isFinite(caption.placement.x)
-              ? caption.placement.x
-              : null,
-          y:
-            typeof caption.placement.y === "number" &&
-            Number.isFinite(caption.placement.y)
-              ? caption.placement.y
-              : null,
-          align: caption.placement.align ?? "bottom",
-        },
-      };
-    });
-
+    const sanitizedDrafts = subtitleDrafts.map(sanitizeCaptionDraft);
     setSavedSubtitleDrafts(sanitizedDrafts);
     setSubtitleDrafts(sanitizedDrafts);
     setIsSubtitleEditorOpen(false);
@@ -719,7 +737,7 @@ export default function Home() {
 
   function updateSubtitleStyle(
     index: number,
-    field: "color" | "font_family" | "font_size",
+    field: "color" | "font_family" | "font_size" | "outline" | "shadow",
     value: string | number
   ) {
     setSubtitleDrafts((current) =>
@@ -771,39 +789,7 @@ export default function Home() {
       return;
     }
 
-    const sanitizedDrafts = subtitleDrafts.map((caption) => {
-      const start = Number.isFinite(caption.start) ? Math.max(0, caption.start) : 0;
-      const end = Number.isFinite(caption.end) ? Math.max(start, caption.end) : start;
-
-      return {
-        ...caption,
-        start,
-        end,
-        final_text: caption.final_text.trim(),
-        style: {
-          color: caption.style.color || "#FFFFFF",
-          font_family: caption.style.font_family || "Arial",
-          font_size:
-            Number.isFinite(caption.style.font_size) && caption.style.font_size > 0
-              ? caption.style.font_size
-              : 54,
-        },
-        placement: {
-          track: caption.placement.track ?? "bottom",
-          x:
-            typeof caption.placement.x === "number" &&
-            Number.isFinite(caption.placement.x)
-              ? caption.placement.x
-              : null,
-          y:
-            typeof caption.placement.y === "number" &&
-            Number.isFinite(caption.placement.y)
-              ? caption.placement.y
-              : null,
-          align: caption.placement.align ?? "bottom",
-        },
-      };
-    });
+    const sanitizedDrafts = subtitleDrafts.map(sanitizeCaptionDraft);
 
     setSavedSubtitleDrafts(sanitizedDrafts);
     setSubtitleDrafts(sanitizedDrafts);

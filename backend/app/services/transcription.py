@@ -12,6 +12,12 @@ DEFAULT_TIME_PRECISION = 2
 ASS_PLAYRES_X = 1080
 ASS_PLAYRES_Y = 1920
 
+DEFAULT_CAPTION_COLOR = "#FFFFFF"
+DEFAULT_CAPTION_FONT_FAMILY = "Arial"
+DEFAULT_CAPTION_FONT_SIZE = 140
+DEFAULT_CAPTION_OUTLINE = 8
+DEFAULT_CAPTION_SHADOW = 3
+
 
 def _round_time(value: float, precision: int = DEFAULT_TIME_PRECISION) -> float:
     return round(float(value), precision)
@@ -233,11 +239,37 @@ def _word_chunks_to_srt(chunks: list[dict]) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
+def _coerce_positive_number(value, fallback: float, minimum: float) -> float:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+    if numeric < minimum:
+        return fallback
+
+    return numeric
+
+
+def _coerce_non_negative_number(value, fallback: float) -> float:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+    if numeric < 0:
+        return fallback
+
+    return numeric
+
+
 def _default_caption_style() -> dict:
     return {
-        "color": "#FFFFFF",
-        "font_family": "Arial",
-        "font_size": 54,
+        "color": DEFAULT_CAPTION_COLOR,
+        "font_family": DEFAULT_CAPTION_FONT_FAMILY,
+        "font_size": DEFAULT_CAPTION_FONT_SIZE,
+        "outline": DEFAULT_CAPTION_OUTLINE,
+        "shadow": DEFAULT_CAPTION_SHADOW,
     }
 
 
@@ -247,6 +279,54 @@ def _default_caption_placement() -> dict:
         "x": None,
         "y": None,
         "align": "bottom",
+    }
+
+
+def _normalize_caption_style(style: dict | None) -> dict:
+    style = style or {}
+    defaults = _default_caption_style()
+
+    return {
+        "color": str(style.get("color") or defaults["color"]),
+        "font_family": str(style.get("font_family") or defaults["font_family"]),
+        "font_size": int(
+            round(
+                _coerce_positive_number(
+                    style.get("font_size"),
+                    defaults["font_size"],
+                    1,
+                )
+            )
+        ),
+        "outline": round(
+            _coerce_non_negative_number(
+                style.get("outline"),
+                defaults["outline"],
+            ),
+            2,
+        ),
+        "shadow": round(
+            _coerce_non_negative_number(
+                style.get("shadow"),
+                defaults["shadow"],
+            ),
+            2,
+        ),
+    }
+
+
+def _normalize_caption_placement(placement: dict | None) -> dict:
+    placement = placement or {}
+    defaults = _default_caption_placement()
+
+    x = placement.get("x")
+    y = placement.get("y")
+
+    return {
+        "track": str(placement.get("track") or defaults["track"]),
+        "x": float(x) if isinstance(x, (int, float)) else None,
+        "y": float(y) if isinstance(y, (int, float)) else None,
+        "align": str(placement.get("align") or defaults["align"]),
     }
 
 
@@ -386,7 +466,7 @@ def _ass_escape_text(text: str) -> str:
 
 
 def _hex_to_ass_bgr(hex_color: str) -> str:
-    value = (hex_color or "#FFFFFF").strip()
+    value = (hex_color or DEFAULT_CAPTION_COLOR).strip()
     if value.startswith("#"):
         value = value[1:]
 
@@ -437,6 +517,8 @@ def _resolve_ass_position_overrides(placement: dict) -> str:
 
 
 def _caption_items_to_ass(caption_items: list[dict]) -> str:
+    default_style = _default_caption_style()
+
     header = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {ASS_PLAYRES_X}
@@ -446,7 +528,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,54,&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,3,0,2,60,60,60,1
+Style: Default,{default_style["font_family"]},{default_style["font_size"]},&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,{default_style["outline"]},{default_style["shadow"]},2,60,60,60,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -471,18 +553,28 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         if end < start:
             end = start
 
-        style = item.get("style") or {}
-        placement = item.get("placement") or {}
+        style = _normalize_caption_style(item.get("style"))
+        placement = _normalize_caption_placement(item.get("placement"))
 
-        font_name = str(style.get("font_family") or "Arial")
-        font_size = int(style.get("font_size") or 54)
-        color = _hex_to_ass_bgr(str(style.get("color") or "#FFFFFF"))
+        font_name = str(style["font_family"])
+        font_size = int(style["font_size"])
+        color = _hex_to_ass_bgr(str(style["color"]))
+        outline = style["outline"]
+        shadow = style["shadow"]
         alignment = _resolve_ass_alignment(placement)
         pos_override = _resolve_ass_position_overrides(placement)
 
         ass_text = _ass_escape_text(text)
         override = (
-            rf"{{\fn{font_name}\fs{font_size}\c{color}\an{alignment}{pos_override}}}"
+            "{"
+            rf"\fn{font_name}"
+            rf"\fs{font_size}"
+            rf"\c{color}"
+            rf"\bord{outline}"
+            rf"\shad{shadow}"
+            rf"\an{alignment}"
+            f"{pos_override}"
+            "}"
         )
 
         lines.append(
@@ -563,12 +655,12 @@ def update_captions_payload_with_edits(
                 "is_manual": bool(
                     edited_item.get("is_manual", existing_item.get("is_manual", False))
                 ),
-                "style": edited_item.get("style")
-                or existing_item.get("style")
-                or _default_caption_style(),
-                "placement": edited_item.get("placement")
-                or existing_item.get("placement")
-                or _default_caption_placement(),
+                "style": _normalize_caption_style(
+                    edited_item.get("style") or existing_item.get("style")
+                ),
+                "placement": _normalize_caption_placement(
+                    edited_item.get("placement") or existing_item.get("placement")
+                ),
             }
         )
 

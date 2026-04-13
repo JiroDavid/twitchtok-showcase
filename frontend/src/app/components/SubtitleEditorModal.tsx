@@ -20,7 +20,7 @@ type SubtitleEditorModalProps = {
   ) => void;
   onChangeStyle: (
     index: number,
-    field: "color" | "font_family" | "font_size",
+    field: "color" | "font_family" | "font_size" | "outline" | "shadow",
     value: string | number
   ) => void;
   onClose: () => void;
@@ -61,7 +61,7 @@ export function SubtitleEditorModal({
               Subtitle Editor
             </h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Edit captions, add missing lines, and set placement and style for manual rerenders.
+              Edit captions, add missing lines, and control manual subtitle styling for rerenders.
             </p>
           </div>
 
@@ -113,7 +113,7 @@ export function SubtitleEditorModal({
                   Subtitle Segments
                 </h3>
                 <p className="mt-1 text-xs leading-5 text-zinc-500">
-                  Manual captions can overlap in time. Track and color fields prepare for multi-speaker layouts.
+                  Manual captions can overlap in time. This step focuses on readability and visual control.
                 </p>
               </div>
 
@@ -264,6 +264,74 @@ export function SubtitleEditorModal({
                         className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
                       />
                     </label>
+                  </div>
+
+                  <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        Outline
+                      </span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.5}
+                        value={caption.style.outline}
+                        onChange={(event) =>
+                          onChangeStyle(index, "outline", Number(event.target.value))
+                        }
+                        className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        Shadow
+                      </span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.5}
+                        value={caption.style.shadow}
+                        onChange={(event) =>
+                          onChangeStyle(index, "shadow", Number(event.target.value))
+                        }
+                        className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        Font Family
+                      </span>
+                      <input
+                        type="text"
+                        value={caption.style.font_family}
+                        onChange={(event) =>
+                          onChangeStyle(index, "font_family", event.target.value)
+                        }
+                        className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-violet-500"
+                      />
+                    </label>
+
+                    <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-3">
+                      <p className="text-[11px] uppercase tracking-wide text-zinc-500">
+                        Style Preview
+                      </p>
+                      <p
+                        className="mt-2 text-center font-semibold"
+                        style={{
+                          color: caption.style.color,
+                          fontFamily: caption.style.font_family,
+                          fontSize: `${Math.min(caption.style.font_size, 48)}px`,
+                          textShadow: `
+                            0 0 ${Math.max(1, caption.style.shadow)}px rgba(0,0,0,0.95),
+                            0 0 ${Math.max(1, caption.style.outline)}px rgba(0,0,0,0.95)
+                          `,
+                        }}
+                      >
+                        {caption.final_text || "Preview"}
+                      </p>
+                    </div>
                   </div>
 
                   <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-3">

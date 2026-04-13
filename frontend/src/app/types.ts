@@ -36,18 +36,21 @@ export type ProcessCaptionRefinementResult = {
 };
 
 export type CaptionTrack = "top" | "bottom" | "free";
+export type CaptionAlign = "top" | "middle" | "bottom";
 
 export type CaptionStyle = {
   color?: string;
   font_family?: string;
   font_size?: number;
+  outline?: number;
+  shadow?: number;
 };
 
 export type CaptionPlacement = {
   track?: CaptionTrack;
   x?: number | null;
   y?: number | null;
-  align?: "top" | "middle" | "bottom";
+  align?: CaptionAlign;
 };
 
 export type MetadataJsonCaptionsEntry = {
@@ -79,12 +82,14 @@ export type EditableCaptionDraft = {
     color: string;
     font_family: string;
     font_size: number;
+    outline: number;
+    shadow: number;
   };
   placement: {
     track: CaptionTrack;
     x: number | null;
     y: number | null;
-    align: "top" | "middle" | "bottom";
+    align: CaptionAlign;
   };
 };
 
