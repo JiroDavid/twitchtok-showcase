@@ -309,8 +309,28 @@ export type PipelineStage =
   | "submitting"
   | "downloading"
   | "download_complete"
+  | "analyzing_layout"
   | "awaiting_crop"
   | "processing"
   | "subtitle_rerender"
   | "completed"
   | "failed";
+
+export type UiMode = "ai" | "non_ai";
+
+export type LayoutAnalysisJobResult = {
+  applied?: boolean;
+  status?: string;
+  model?: string;
+  reason?: string;
+  suggested_layout?: LayoutOption | null;
+  confidence?: number | null;
+  reasoning?: string | null;
+  top_crop_hint?: { x: number; y: number; w: number; h: number } | null;
+  bottom_crop_hint?: { x: number; y: number; w: number; h: number } | null;
+  frame?: {
+    frame_path?: string;
+    frame_filename?: string;
+    frame_url?: string;
+  };
+};

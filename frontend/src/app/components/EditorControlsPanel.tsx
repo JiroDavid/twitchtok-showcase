@@ -6,11 +6,13 @@ import type {
   StackedConfig,
   TwitchClip,
   TwitchUser,
+  UiMode,
 } from "../types";
 
 type EditorControlsPanelProps = {
   clipUrl: string;
   currentHighlightConfig: HighlightConfig;
+  hideModeBadge: boolean;
   isSubmitting: boolean;
   layout: HighlightConfig["layout"];
   selectedDownloadedPath: string;
@@ -20,15 +22,19 @@ type EditorControlsPanelProps = {
   stackedConfigIsValid: boolean;
   submitButtonLabel: string;
   twitchUser: TwitchUser | null;
+  uiMode: UiMode;
+  uiModeLocked: boolean;
   onClipUrlChange: (value: string) => void;
   onOpenConfigureHighlight: () => void;
   onOpenCropEditor: () => void;
   onSourceModeChange: (value: SourceMode) => void;
+  onToggleUiMode: () => void;
 };
 
 export function EditorControlsPanel({
   clipUrl,
   currentHighlightConfig,
+  hideModeBadge,
   isSubmitting,
   layout,
   selectedDownloadedPath,
@@ -38,10 +44,13 @@ export function EditorControlsPanel({
   stackedConfigIsValid,
   submitButtonLabel,
   twitchUser,
+  uiMode,
+  uiModeLocked,
   onClipUrlChange,
   onOpenConfigureHighlight,
   onOpenCropEditor,
   onSourceModeChange,
+  onToggleUiMode,
 }: EditorControlsPanelProps) {
   const canStart =
     !(sourceMode === "twitch_clips" && !selectedTwitchClip) &&
@@ -51,10 +60,34 @@ export function EditorControlsPanel({
   return (
     <section className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
       <div>
-        <h2 className="text-xl font-semibold">Editor Controls</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold">Editor Controls</h2>
+          {!hideModeBadge && (
+            <span
+              className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                uiMode === "ai"
+                  ? "bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/40"
+                  : "bg-zinc-800 text-zinc-400 ring-1 ring-zinc-700"
+              }`}
+            >
+              {uiMode === "ai" ? "AI Mode" : "Manual Mode"}
+            </span>
+          )}
+        </div>
         <p className="mt-2 text-sm leading-6 text-zinc-400">
-          Choose a source, then open the quick highlight setup before starting the pipeline.
+          {uiMode === "ai"
+            ? "AI will analyse the clip and select the best layout automatically."
+            : "Choose a source, then open the quick highlight setup before starting the pipeline."}
         </p>
+        {!uiModeLocked && (
+          <button
+            type="button"
+            onClick={onToggleUiMode}
+            className="mt-3 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-400 transition hover:border-violet-500/60 hover:text-violet-300"
+          >
+            Switch to {uiMode === "ai" ? "Manual" : "AI"} Mode
+          </button>
+        )}
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-3">
@@ -181,7 +214,9 @@ export function EditorControlsPanel({
                 Current Quick Highlight Setup
               </h3>
               <p className="mt-1 text-xs text-zinc-500">
-                These defaults will be applied before the first render.
+                {uiMode === "ai"
+                  ? "Layout will be selected automatically by AI. Font and colour apply as usual."
+                  : "These defaults will be applied before the first render."}
               </p>
             </div>
           </div>
@@ -189,9 +224,13 @@ export function EditorControlsPanel({
           <div className="mt-4 grid gap-3">
             <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300">
               Layout:{" "}
-              <span className="font-semibold text-zinc-100">
-                {currentHighlightConfig.layout}
-              </span>
+              {uiMode === "ai" ? (
+                <span className="font-semibold text-violet-300">AI selected</span>
+              ) : (
+                <span className="font-semibold text-zinc-100">
+                  {currentHighlightConfig.layout}
+                </span>
+              )}
             </div>
 
             <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300">

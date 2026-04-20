@@ -2,13 +2,15 @@
 
 import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
 
-import type { DragMode, DragTarget, StackedConfig } from "../types";
+import type { DragMode, DragTarget, StackedConfig, UiMode } from "../types";
 
 type CropEditorModalProps = {
   bottomPreviewStyle: React.CSSProperties;
   cropDraft: StackedConfig;
   cropEditorPreviewUrl: string | null;
+  hideModeBadge: boolean;
   isOpen: boolean;
+  uiMode: UiMode;
   onClose: () => void;
   onLoadedData: (video: HTMLVideoElement) => void;
   onLoadedMetadata: (video: HTMLVideoElement) => void;
@@ -28,7 +30,9 @@ export function CropEditorModal({
   bottomPreviewStyle,
   cropDraft,
   cropEditorPreviewUrl,
+  hideModeBadge,
   isOpen,
+  uiMode,
   onClose,
   onLoadedData,
   onLoadedMetadata,
@@ -48,9 +52,22 @@ export function CropEditorModal({
       <div className="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
         <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-100">
-              Visual Stacked Crop Editor
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-zinc-100">
+                Visual Stacked Crop Editor
+              </h2>
+              {!hideModeBadge && (
+                <span
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                    uiMode === "ai"
+                      ? "bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/40"
+                      : "bg-zinc-800 text-zinc-400 ring-1 ring-zinc-700"
+                  }`}
+                >
+                  {uiMode === "ai" ? "AI Mode" : "Manual Mode"}
+                </span>
+              )}
+            </div>
             <p className="mt-1 text-sm text-zinc-500">
               Drag the colored crop boxes over the source video. Final export
               remains fixed at 1080×1920.

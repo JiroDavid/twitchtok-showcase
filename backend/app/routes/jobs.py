@@ -6,6 +6,7 @@ from app.schemas.jobs import (
     ClipDownloadJobRequest,
     JobCreateResponse,
     JobStatusResponse,
+    LayoutAnalysisJobRequest,
     SubtitleRerenderJobRequest,
     VideoProcessJobRequest,
 )
@@ -35,6 +36,7 @@ from app.services.video import (
     extract_representative_frame,
     process_video_to_vertical,
 )
+from app.services.layout_analysis import analyze_video_layout
 from app.services.vision_analysis import DEFAULT_VISION_MODEL, generate_vision_notes
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -486,6 +488,78 @@ def create_subtitle_rerender_job(
         payload.input_video_path,
         payload.captions_json_path,
         [item.model_dump() for item in payload.items],
+    )
+
+    return JobCreateResponse(job_id=job_id, status="queued")
+
+
+def process_layout_analysis_job(
+    job_id: str,
+    input_path: str,
+    vision_model: str | None,
+) -> None:
+    print(
+        f"[jobs] Starting layout analysis job: job_id={job_id}, input_path={input_path}"
+    )
+
+    try:
+        update_job_status(job_id, "processing")
+
+        input_file = Path(input_path)
+        if not input_file.exists():
+            raise FileNotFoundError(f"Input video not found: {input_path}")
+
+        short_job_id = job_id.split("-")[0]
+        frame_filename = f"{input_file.stem}_layout_analysis_{short_job_id}_frame.jpg"
+
+        representative_frame = extract_representative_frame(
+            input_path=input_path,
+            output_filename=frame_filename,
+        )
+
+        analysis_result = analyze_video_layout(
+            image_path=representative_frame["frame_path"],
+            model_name=vision_model,
+        )
+
+        update_job_status(
+            job_id,
+            "completed",
+            result={
+                **analysis_result,
+                "frame": representative_frame,
+            },
+        )
+
+        print(f"[jobs] Layout analysis job completed: {job_id}")
+
+    except Exception as exc:
+        print(f"[jobs] Layout analysis job failed: {job_id}, error={exc}")
+        update_job_status(job_id, "failed", error=str(exc))
+
+
+@router.post("/analyze-layout", response_model=JobCreateResponse)
+def create_layout_analysis_job(
+    payload: LayoutAnalysisJobRequest,
+    background_tasks: BackgroundTasks,
+):
+    input_file = Path(payload.input_path)
+    if not input_file.exists():
+        raise HTTPException(status_code=404, detail="Input video file not found")
+
+    job_id = create_job(
+        job_type="layout_analysis",
+        payload={
+            "input_path": payload.input_path,
+            "vision_model": payload.vision_model,
+        },
+    )
+
+    background_tasks.add_task(
+        process_layout_analysis_job,
+        job_id,
+        payload.input_path,
+        payload.vision_model,
     )
 
     return JobCreateResponse(job_id=job_id, status="queued")

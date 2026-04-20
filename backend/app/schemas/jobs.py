@@ -82,6 +82,11 @@ class JobCreateResponse(BaseModel):
     status: str
 
 
+class LayoutAnalysisJobRequest(BaseModel):
+    input_path: str
+    vision_model: Optional[str] = None
+
+
 class JobStatusResponse(BaseModel):
     id: str
     type: str

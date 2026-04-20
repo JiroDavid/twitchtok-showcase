@@ -31,6 +31,7 @@ import type {
   HighlightFontOption,
   JobCreateResponse,
   JobStatusResponse,
+  LayoutAnalysisJobResult,
   LayoutOption,
   MetadataJsonCaptionsEntry,
   OAuthPayload,
@@ -41,6 +42,7 @@ import type {
   SubtitleRerenderJobResult,
   TwitchClip,
   TwitchUser,
+  UiMode,
 } from "./types";
 import { clamp, roundBox } from "./utils";
 
@@ -253,6 +255,17 @@ export default function Home() {
     });
   const [isConfigureHighlightOpen, setIsConfigureHighlightOpen] = useState(false);
 
+  const [uiMode, setUiMode] = useState<UiMode>("non_ai");
+  const [hideModeBadge, setHideModeBadge] = useState(false);
+  const [uiModeLocked, setUiModeLocked] = useState(false);
+
+  const [layoutAnalysisJobId, setLayoutAnalysisJobId] = useState<string | null>(null);
+  const [layoutAnalysisJobStatus, setLayoutAnalysisJobStatus] =
+    useState<JobStatusResponse | null>(null);
+  const [pendingAnalysisProcessPath, setPendingAnalysisProcessPath] = useState<
+    string | null
+  >(null);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
   const outputPreviewRef = useRef<HTMLDivElement | null>(null);
@@ -410,6 +423,17 @@ export default function Home() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+
+    const modeParam = params.get("mode");
+    if (modeParam === "ai" || modeParam === "non_ai") {
+      setUiMode(modeParam);
+      setUiModeLocked(true);
+    }
+
+    if (params.get("hide_mode") === "true") {
+      setHideModeBadge(true);
+    }
+
     const oauth = params.get("oauth");
     const payloadParam = params.get("payload");
     const errorMessage = params.get("message");
@@ -512,6 +536,11 @@ export default function Home() {
   }, [generatedCaptionItems]);
 
   function openConfigureHighlight() {
+    if (uiMode === "ai") {
+      void startConfiguredPipeline(highlightConfig);
+      return;
+    }
+
     setHighlightConfigDraft({
       layout,
       subtitle_style: {
@@ -549,6 +578,9 @@ export default function Home() {
     setPendingCropProcessPath(null);
     setIsCropEditorOpen(false);
     setIsSubtitleEditorOpen(false);
+    setLayoutAnalysisJobId(null);
+    setLayoutAnalysisJobStatus(null);
+    setPendingAnalysisProcessPath(null);
 
     try {
       if (config.layout === "stacked" && !stackedConfigIsValid) {
@@ -608,6 +640,35 @@ export default function Home() {
       } else {
         if (!selectedDownloadedPath) {
           throw new Error("Please select a downloaded file.");
+        }
+
+        if (uiMode === "ai") {
+          setPipelineStage("analyzing_layout");
+          setPipelineMessage("Analyzing layout with AI...");
+          setPendingAnalysisProcessPath(selectedDownloadedPath);
+
+          const analysisResponse = await fetch(
+            `${API_BASE_URL}/jobs/analyze-layout`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                input_path: selectedDownloadedPath,
+                vision_model: null,
+              }),
+            }
+          );
+
+          if (!analysisResponse.ok) {
+            const errorText = await analysisResponse.text();
+            throw new Error(
+              `Layout analysis job failed to start (${analysisResponse.status}): ${errorText}`
+            );
+          }
+
+          const analysisData: JobCreateResponse = await analysisResponse.json();
+          setLayoutAnalysisJobId(analysisData.job_id);
+          return;
         }
 
         if (config.layout === "stacked") {
@@ -1009,6 +1070,46 @@ export default function Home() {
           const submittedLayout = submittedHighlightConfigRef.current.layout;
           const submittedSourceMode = submittedSourceModeRef.current;
 
+          if (uiMode === "ai") {
+            setSelectedDownloadedPath(path);
+            setPipelineStage("analyzing_layout");
+            setPipelineMessage("Download complete — analyzing layout with AI...");
+            setPendingAnalysisProcessPath(path);
+            clearInterval(intervalId);
+            setDownloadJobId(null);
+
+            try {
+              const analysisResponse = await fetch(
+                `${API_BASE_URL}/jobs/analyze-layout`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    input_path: path,
+                    vision_model: null,
+                  }),
+                }
+              );
+
+              if (!analysisResponse.ok) {
+                const errorText = await analysisResponse.text();
+                throw new Error(
+                  `Layout analysis job failed to start (${analysisResponse.status}): ${errorText}`
+                );
+              }
+
+              const analysisData: JobCreateResponse = await analysisResponse.json();
+              setLayoutAnalysisJobId(analysisData.job_id);
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : "Layout analysis request error";
+              setRequestError(message);
+              setPipelineStage("failed");
+              setPipelineMessage("Layout analysis failed to start.");
+            }
+            return;
+          }
+
           if (
             submittedLayout === "stacked" &&
             submittedSourceMode !== "downloaded_file"
@@ -1154,6 +1255,105 @@ export default function Home() {
   }, [processJobId]);
 
   useEffect(() => {
+    if (!layoutAnalysisJobId) return;
+
+    async function fetchLayoutAnalysisJobStatus() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/jobs/${layoutAnalysisJobId}`);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `Failed to fetch layout analysis job status (${response.status}): ${errorText}`
+          );
+        }
+
+        const data: JobStatusResponse = await response.json();
+        setLayoutAnalysisJobStatus(data);
+
+        if (data.status === "queued" || data.status === "processing") {
+          setPipelineStage("analyzing_layout");
+          setPipelineMessage("Analyzing video layout with AI...");
+        }
+
+        if (data.status === "completed") {
+          const result = data.result as LayoutAnalysisJobResult | null;
+          const suggestedLayout = result?.suggested_layout ?? "cropped";
+          const topCropHint = result?.top_crop_hint;
+          const bottomCropHint = result?.bottom_crop_hint;
+
+          if (topCropHint && bottomCropHint && suggestedLayout === "stacked") {
+            setStackedConfig((current) => ({
+              top_crop: {
+                x: topCropHint.x,
+                y: topCropHint.y,
+                w: topCropHint.w,
+                h: topCropHint.h,
+              },
+              bottom_crop: {
+                x: bottomCropHint.x,
+                y: bottomCropHint.y,
+                w: bottomCropHint.w,
+                h: bottomCropHint.h,
+              },
+              split_ratio_top: current.split_ratio_top,
+            }));
+          }
+
+          const aiConfig: HighlightConfig = {
+            ...submittedHighlightConfigRef.current,
+            layout: suggestedLayout,
+          };
+          submittedHighlightConfigRef.current = aiConfig;
+          setLayout(suggestedLayout);
+          setHighlightConfig(aiConfig);
+
+          const processPath = pendingAnalysisProcessPath;
+
+          if (suggestedLayout === "stacked" && processPath) {
+            setPipelineStage("awaiting_crop");
+            setPipelineMessage(
+              `AI suggested stacked layout — confirm crop to continue.`
+            );
+            openCropEditor(undefined, processPath);
+          } else if (processPath) {
+            setPipelineStage("processing");
+            setPipelineMessage(
+              `AI suggested "${suggestedLayout}" layout — starting render...`
+            );
+            setDownloadedPath(processPath);
+          }
+
+          setPendingAnalysisProcessPath(null);
+          setLayoutAnalysisJobId(null);
+          clearInterval(intervalId);
+        }
+
+        if (data.status === "failed") {
+          setPipelineStage("failed");
+          setPipelineMessage("Layout analysis failed.");
+          clearInterval(intervalId);
+          setLayoutAnalysisJobId(null);
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown layout analysis polling error";
+        setRequestError(message);
+        setPipelineStage("failed");
+        setPipelineMessage("Layout analysis polling failed.");
+        clearInterval(intervalId);
+      }
+    }
+
+    const intervalId = setInterval(() => {
+      void fetchLayoutAnalysisJobStatus();
+    }, 2000);
+    void fetchLayoutAnalysisJobStatus();
+
+    return () => clearInterval(intervalId);
+  }, [layoutAnalysisJobId]);
+
+  useEffect(() => {
     if (!subtitleRerenderJobId) return;
 
     async function fetchSubtitleRerenderJobStatus() {
@@ -1248,12 +1448,16 @@ export default function Home() {
       ? "Submitting..."
       : pipelineStage === "downloading"
       ? "Downloading..."
+      : pipelineStage === "analyzing_layout"
+      ? "Analysing layout..."
       : pipelineStage === "awaiting_crop"
       ? "Waiting for crop..."
       : pipelineStage === "processing"
       ? "Processing..."
       : pipelineStage === "subtitle_rerender"
       ? "Applying subtitle edits..."
+      : uiMode === "ai"
+      ? "Start AI Pipeline"
       : "Configure Highlight";
 
   const statusTone =
@@ -1264,6 +1468,7 @@ export default function Home() {
       : overallStatus === "submitting" ||
         overallStatus === "downloading" ||
         overallStatus === "download_complete" ||
+        overallStatus === "analyzing_layout" ||
         overallStatus === "awaiting_crop" ||
         overallStatus === "processing" ||
         overallStatus === "subtitle_rerender"
@@ -1326,6 +1531,7 @@ export default function Home() {
             <EditorControlsPanel
               clipUrl={clipUrl}
               currentHighlightConfig={highlightConfig}
+              hideModeBadge={hideModeBadge}
               isSubmitting={isSubmitting}
               layout={layout}
               selectedDownloadedPath={selectedDownloadedPath}
@@ -1335,10 +1541,15 @@ export default function Home() {
               stackedConfigIsValid={stackedConfigIsValid}
               submitButtonLabel={submitButtonLabel}
               twitchUser={twitchUser}
+              uiMode={uiMode}
+              uiModeLocked={uiModeLocked}
               onClipUrlChange={setClipUrl}
               onOpenConfigureHighlight={openConfigureHighlight}
               onOpenCropEditor={() => openCropEditor()}
               onSourceModeChange={setSourceMode}
+              onToggleUiMode={() =>
+                setUiMode((current) => (current === "ai" ? "non_ai" : "ai"))
+              }
             />
 
             <JobActivityPanel
@@ -1469,7 +1680,9 @@ export default function Home() {
         bottomPreviewStyle={bottomPreviewStyle}
         cropDraft={cropDraft}
         cropEditorPreviewUrl={cropEditorPreviewUrl}
+        hideModeBadge={hideModeBadge}
         isOpen={isCropEditorOpen}
+        uiMode={uiMode}
         onClose={closeCropEditor}
         onLoadedData={(video) => {
           setVideoDisplaySize({

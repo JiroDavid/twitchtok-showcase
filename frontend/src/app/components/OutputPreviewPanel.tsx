@@ -22,8 +22,10 @@ const PIPELINE_STAGE_LABELS: Record<PipelineStage, string> = {
   submitting: "Submitting",
   downloading: "Downloading",
   download_complete: "Download Complete",
+  analyzing_layout: "Analysing Layout",
   awaiting_crop: "Awaiting Crop Confirmation",
   processing: "Processing",
+  subtitle_rerender: "Applying Subtitle Edits",
   completed: "Completed",
   failed: "Failed",
 };
