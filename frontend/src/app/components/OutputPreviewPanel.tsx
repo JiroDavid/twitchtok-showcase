@@ -9,6 +9,7 @@ import type {
   MetadataJsonPayload,
   PipelineStage,
   ProcessJobResult,
+  UiMode,
 } from "../types";
 
 const LAYOUT_LABELS: Record<LayoutOption, string> = {
@@ -31,6 +32,8 @@ const PIPELINE_STAGE_LABELS: Record<PipelineStage, string> = {
 };
 
 type OutputPreviewPanelProps = {
+  onAddSubtitles: () => void;
+  onOpenCropAdjust: () => void;
   onOpenSubtitleEditor: () => void;
   outputVideoUrl: string | null;
   pipelineMessage: string;
@@ -38,6 +41,7 @@ type OutputPreviewPanelProps = {
   processJobStatus: JobStatusResponse | null;
   sectionRef: RefObject<HTMLDivElement | null>;
   statusTone: string;
+  uiMode: UiMode;
 };
 
 function formatSeconds(value: number | undefined) {
@@ -54,6 +58,8 @@ function getPreferredCaptionText(caption: MetadataJsonCaptionsEntry) {
 }
 
 export function OutputPreviewPanel({
+  onAddSubtitles,
+  onOpenCropAdjust,
   onOpenSubtitleEditor,
   outputVideoUrl,
   pipelineMessage,
@@ -61,7 +67,10 @@ export function OutputPreviewPanel({
   processJobStatus,
   sectionRef,
   statusTone,
+  uiMode,
 }: OutputPreviewPanelProps) {
+  const isCompleted = pipelineStage === "completed";
+  const isAiMode = uiMode === "ai";
   const processResult = processJobStatus?.result as ProcessJobResult | null;
   const metadataPayload = processResult?.metadata?.payload as
     | MetadataJsonPayload
@@ -95,11 +104,23 @@ export function OutputPreviewPanel({
           </p>
         </div>
 
-        {processResult ? (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-300">
-            {getLayoutLabel(processResult.layout)} layout
-          </div>
-        ) : null}
+        <div className="flex items-center gap-3">
+          {processResult ? (
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-300">
+              {getLayoutLabel(processResult.layout)} layout
+            </div>
+          ) : null}
+
+          {isCompleted && processResult?.layout === "stacked" ? (
+            <button
+              type="button"
+              onClick={onOpenCropAdjust}
+              className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800"
+            >
+              Adjust Crop
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-4">
@@ -250,13 +271,23 @@ export function OutputPreviewPanel({
                   {captionItems.length} segments
                 </div>
 
-                {captionItems.length > 0 ? (
+                {isAiMode && captionItems.length > 0 ? (
                   <button
                     type="button"
                     onClick={onOpenSubtitleEditor}
                     className="rounded-xl border border-violet-500/40 bg-violet-500/20 px-3 py-2 text-xs font-medium text-violet-100 transition hover:border-violet-400 hover:bg-violet-500/30"
                   >
                     Edit Subtitles
+                  </button>
+                ) : null}
+
+                {!isAiMode && isCompleted ? (
+                  <button
+                    type="button"
+                    onClick={onAddSubtitles}
+                    className="rounded-xl border border-zinc-600 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-700"
+                  >
+                    Add Subtitles
                   </button>
                 ) : null}
               </div>

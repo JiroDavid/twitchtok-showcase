@@ -4,6 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from app.schemas.jobs import (
     ClipDownloadJobRequest,
+    CropRerenderJobRequest,
     JobCreateResponse,
     JobStatusResponse,
     LayoutAnalysisJobRequest,
@@ -104,11 +105,12 @@ def process_video_job(
     stacked_config=None,
     captions=None,
     metadata=None,
+    crop_source: str | None = None,
 ) -> None:
     print(
         f"[jobs] Starting video job: job_id={job_id}, input_path={input_path}, "
         f"layout={layout}, stacked_config={stacked_config}, captions={captions}, "
-        f"metadata={metadata}"
+        f"metadata={metadata}, crop_source={crop_source}"
     )
 
     try:
@@ -311,6 +313,9 @@ def process_video_job(
                 "payload": metadata_payload,
             }
 
+        result["stacked_config_used"] = stacked_config
+        result["crop_source"] = crop_source
+
         update_job_status(job_id, "completed", result=result)
 
         print(f"[jobs] Video job completed: {job_id}")
@@ -323,7 +328,7 @@ def process_video_job(
 def process_subtitle_rerender_job(
     job_id: str,
     input_video_path: str,
-    captions_json_path: str,
+    captions_json_path: str | None,
     items: list[dict],
 ) -> None:
     print(
@@ -335,27 +340,36 @@ def process_subtitle_rerender_job(
         update_job_status(job_id, "processing")
 
         input_video = Path(input_video_path)
-        captions_json_file = Path(captions_json_path)
+        short_job_id = job_id.split("-")[0]
 
         if not input_video.exists():
             raise FileNotFoundError(f"Input video not found: {input_video_path}")
 
-        if not captions_json_file.exists():
-            raise FileNotFoundError(f"Captions JSON not found: {captions_json_path}")
+        if captions_json_path:
+            captions_json_file = Path(captions_json_path)
+            if not captions_json_file.exists():
+                raise FileNotFoundError(f"Captions JSON not found: {captions_json_path}")
+            captions_payload = load_captions_json(captions_json_path)
+            updated_payload = update_captions_payload_with_edits(captions_payload, items)
+            saved_json_result = save_captions_json(captions_json_path, updated_payload)
+            json_stem = captions_json_file.stem
+        else:
+            fresh_payload = {"captions": items}
+            fresh_json_filename = f"{input_video.stem}_manual_{short_job_id}.json"
+            updated_payload = fresh_payload
+            saved_json_result = save_captions_json(
+                f"/tmp/{fresh_json_filename}", updated_payload
+            )
+            captions_json_path = saved_json_result["captions_json_path"]
+            json_stem = Path(captions_json_path).stem
 
-        captions_payload = load_captions_json(captions_json_path)
-        updated_payload = update_captions_payload_with_edits(captions_payload, items)
-        saved_json_result = save_captions_json(captions_json_path, updated_payload)
-
-        short_job_id = job_id.split("-")[0]
-
-        srt_filename = f"{captions_json_file.stem}_edited_{short_job_id}.srt"
+        srt_filename = f"{json_stem}_edited_{short_job_id}.srt"
         srt_result = write_srt_from_captions_json(
             captions_json_path=captions_json_path,
             output_filename=srt_filename,
         )
 
-        ass_filename = f"{captions_json_file.stem}_edited_{short_job_id}.ass"
+        ass_filename = f"{json_stem}_edited_{short_job_id}.ass"
         ass_result = write_ass_from_captions_json(
             captions_json_path=captions_json_path,
             output_filename=ass_filename,
@@ -430,6 +444,7 @@ def create_video_process_job(
     stacked_config = payload.stacked_config
     captions = payload.captions
     metadata = payload.metadata
+    crop_source = payload.crop_source
 
     input_file = Path(input_path)
     if not input_file.exists():
@@ -443,6 +458,7 @@ def create_video_process_job(
             "stacked_config": stacked_config.model_dump() if stacked_config else None,
             "captions": captions.model_dump() if captions else None,
             "metadata": metadata.model_dump() if metadata else None,
+            "crop_source": crop_source,
         },
     )
 
@@ -454,6 +470,7 @@ def create_video_process_job(
         stacked_config.model_dump() if stacked_config else None,
         captions.model_dump() if captions else None,
         metadata.model_dump() if metadata else None,
+        crop_source,
     )
 
     return JobCreateResponse(job_id=job_id, status="queued")
@@ -465,13 +482,14 @@ def create_subtitle_rerender_job(
     background_tasks: BackgroundTasks,
 ):
     input_video_file = Path(payload.input_video_path)
-    captions_json_file = Path(payload.captions_json_path)
 
     if not input_video_file.exists():
         raise HTTPException(status_code=404, detail="Input video file not found")
 
-    if not captions_json_file.exists():
-        raise HTTPException(status_code=404, detail="Captions JSON file not found")
+    if payload.captions_json_path:
+        captions_json_file = Path(payload.captions_json_path)
+        if not captions_json_file.exists():
+            raise HTTPException(status_code=404, detail="Captions JSON file not found")
 
     job_id = create_job(
         job_type="subtitle_rerender",
@@ -488,6 +506,90 @@ def create_subtitle_rerender_job(
         payload.input_video_path,
         payload.captions_json_path,
         [item.model_dump() for item in payload.items],
+    )
+
+    return JobCreateResponse(job_id=job_id, status="queued")
+
+
+def process_crop_rerender_job(
+    job_id: str,
+    input_path: str,
+    stacked_config: dict,
+    captions_ass_path: str | None,
+) -> None:
+    print(
+        f"[jobs] Starting crop rerender job: job_id={job_id}, input_path={input_path}, "
+        f"stacked_config={stacked_config}"
+    )
+
+    try:
+        update_job_status(job_id, "processing")
+
+        input_file = Path(input_path)
+        if not input_file.exists():
+            raise FileNotFoundError(f"Input video not found: {input_path}")
+
+        short_job_id = job_id.split("-")[0]
+        output_filename = f"{input_file.stem}_cropadjust_{short_job_id}.mp4"
+
+        result = process_video_to_vertical(
+            input_path=input_path,
+            output_filename=output_filename,
+            layout="stacked",
+            stacked_config=stacked_config,
+        )
+
+        result["stacked_config_used"] = stacked_config
+        result["crop_source"] = "manual"
+
+        if captions_ass_path:
+            ass_file = Path(captions_ass_path)
+            if ass_file.exists():
+                burned_filename = f"{input_file.stem}_cropadjust_{short_job_id}_subtitled.mp4"
+                burned = burn_subtitles_into_video(
+                    input_video_path=result["output_path"],
+                    subtitles_path=captions_ass_path,
+                    output_filename=burned_filename,
+                    subtitle_format="ass",
+                )
+                result["output_path"] = burned["output_path"]
+                result["filename"] = burned["filename"]
+                result["output_url"] = burned["output_url"]
+
+        update_job_status(job_id, "completed", result=result)
+        print(f"[jobs] Crop rerender job completed: {job_id}")
+
+    except Exception as exc:
+        print(f"[jobs] Crop rerender job failed: {job_id}, error={exc}")
+        update_job_status(job_id, "failed", error=str(exc))
+
+
+@router.post("/crop-rerender", response_model=JobCreateResponse)
+def create_crop_rerender_job(
+    payload: CropRerenderJobRequest,
+    background_tasks: BackgroundTasks,
+):
+    input_file = Path(payload.input_path)
+    if not input_file.exists():
+        raise HTTPException(status_code=404, detail="Input video file not found")
+
+    stacked_config_dict = payload.stacked_config.model_dump()
+
+    job_id = create_job(
+        job_type="crop_rerender",
+        payload={
+            "input_path": payload.input_path,
+            "stacked_config": stacked_config_dict,
+            "captions_ass_path": payload.captions_ass_path,
+        },
+    )
+
+    background_tasks.add_task(
+        process_crop_rerender_job,
+        job_id,
+        payload.input_path,
+        stacked_config_dict,
+        payload.captions_ass_path,
     )
 
     return JobCreateResponse(job_id=job_id, status="queued")

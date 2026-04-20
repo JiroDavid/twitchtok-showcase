@@ -233,6 +233,17 @@ export type ProcessJobResult = {
   metadata?: ProcessMetadataArtifactResult & {
     payload?: MetadataJsonPayload;
   };
+  stacked_config_used?: StackedConfig | null;
+  crop_source?: "ai" | "manual" | null;
+};
+
+export type CropRerenderJobResult = {
+  output_path?: string;
+  filename?: string;
+  layout?: string;
+  output_url?: string;
+  stacked_config_used?: StackedConfig | null;
+  crop_source?: "ai" | "manual" | null;
 };
 
 export type SubtitleRerenderJobResult = {
@@ -323,8 +334,6 @@ export type LayoutAnalysisJobResult = {
   status?: string;
   model?: string;
   reason?: string;
-  suggested_layout?: LayoutOption | null;
-  confidence?: number | null;
   reasoning?: string | null;
   top_crop_hint?: { x: number; y: number; w: number; h: number } | null;
   bottom_crop_hint?: { x: number; y: number; w: number; h: number } | null;

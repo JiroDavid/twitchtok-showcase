@@ -1,11 +1,12 @@
 "use client";
 
-import type { HighlightConfig, HighlightFontOption, LayoutOption } from "../types";
+import type { HighlightConfig, HighlightFontOption, LayoutOption, UiMode } from "../types";
 
 type ConfigureHighlightModalProps = {
   draftConfig: HighlightConfig;
   isOpen: boolean;
   isSubmitting: boolean;
+  uiMode: UiMode;
   onChangeColor: (color: string) => void;
   onChangeFontFamily: (fontFamily: HighlightFontOption) => void;
   onChangeLayout: (layout: LayoutOption) => void;
@@ -97,12 +98,14 @@ export function ConfigureHighlightModal({
   draftConfig,
   isOpen,
   isSubmitting,
+  uiMode,
   onChangeColor,
   onChangeFontFamily,
   onChangeLayout,
   onClose,
   onConfirm,
 }: ConfigureHighlightModalProps) {
+  const isAiMode = uiMode === "ai";
   if (!isOpen) return null;
 
   return (
@@ -146,71 +149,75 @@ export function ConfigureHighlightModal({
             </div>
           </section>
 
-          <section>
-            <h3 className="text-lg font-semibold text-zinc-100">Font Style</h3>
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-              {FONT_OPTIONS.map((font) => {
-                const isSelected =
-                  draftConfig.subtitle_style.font_family === font.label;
+          {isAiMode && (
+            <section>
+              <h3 className="text-lg font-semibold text-zinc-100">Font Style</h3>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                {FONT_OPTIONS.map((font) => {
+                  const isSelected =
+                    draftConfig.subtitle_style.font_family === font.label;
 
-                return (
-                  <button
-                    key={font.label}
-                    type="button"
-                    onClick={() => onChangeFontFamily(font.label)}
-                    className={`rounded-2xl border px-4 py-4 text-center transition ${
-                      isSelected
-                        ? "border-zinc-100 bg-zinc-200 text-zinc-900"
-                        : "border-zinc-800 bg-black text-zinc-100 hover:border-zinc-600"
-                    }`}
-                  >
-                    <div
-                      className="text-3xl font-semibold leading-none"
-                      style={{ fontFamily: font.label }}
+                  return (
+                    <button
+                      key={font.label}
+                      type="button"
+                      onClick={() => onChangeFontFamily(font.label)}
+                      className={`rounded-2xl border px-4 py-4 text-center transition ${
+                        isSelected
+                          ? "border-zinc-100 bg-zinc-200 text-zinc-900"
+                          : "border-zinc-800 bg-black text-zinc-100 hover:border-zinc-600"
+                      }`}
                     >
-                      Ag
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-semibold text-zinc-100">
-              Subtitle Color
-            </h3>
-            <div className="mt-4 grid grid-cols-5 gap-3">
-              {COLOR_OPTIONS.map((color) => {
-                const isSelected = draftConfig.subtitle_style.color === color;
-
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => onChangeColor(color)}
-                    className={`flex h-12 items-center justify-center rounded-xl border transition ${
-                      isSelected
-                        ? "border-zinc-100 shadow-[0_0_0_2px_rgba(255,255,255,0.25)]"
-                        : "border-zinc-800 hover:border-zinc-600"
-                    }`}
-                    style={{ backgroundColor: color }}
-                    aria-label={`Select subtitle color ${color}`}
-                  >
-                    {isSelected ? (
-                      <span
-                        className={`text-lg font-bold ${
-                          color === "#FFFFFF" ? "text-black" : "text-white"
-                        }`}
+                      <div
+                        className="text-3xl font-semibold leading-none"
+                        style={{ fontFamily: font.label }}
                       >
-                        ✓
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+                        Ag
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {isAiMode && (
+            <section>
+              <h3 className="text-lg font-semibold text-zinc-100">
+                Subtitle Color
+              </h3>
+              <div className="mt-4 grid grid-cols-5 gap-3">
+                {COLOR_OPTIONS.map((color) => {
+                  const isSelected = draftConfig.subtitle_style.color === color;
+
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => onChangeColor(color)}
+                      className={`flex h-12 items-center justify-center rounded-xl border transition ${
+                        isSelected
+                          ? "border-zinc-100 shadow-[0_0_0_2px_rgba(255,255,255,0.25)]"
+                          : "border-zinc-800 hover:border-zinc-600"
+                      }`}
+                      style={{ backgroundColor: color }}
+                      aria-label={`Select subtitle color ${color}`}
+                    >
+                      {isSelected ? (
+                        <span
+                          className={`text-lg font-bold ${
+                            color === "#FFFFFF" ? "text-black" : "text-white"
+                          }`}
+                        >
+                          ✓
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           <section className="rounded-2xl border border-zinc-800 bg-black px-4 py-4">
             <div className="flex items-start justify-between gap-4">

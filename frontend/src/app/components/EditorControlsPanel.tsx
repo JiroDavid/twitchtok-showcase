@@ -214,9 +214,8 @@ export function EditorControlsPanel({
                 Current Quick Highlight Setup
               </h3>
               <p className="mt-1 text-xs text-zinc-500">
-                {uiMode === "ai"
-                  ? "Layout will be selected automatically by AI. Font and colour apply as usual."
-                  : "These defaults will be applied before the first render."}
+                These defaults will be applied before the first render.
+                {uiMode === "ai" && " AI will also auto-transcribe and refine captions."}
               </p>
             </div>
           </div>
@@ -224,13 +223,9 @@ export function EditorControlsPanel({
           <div className="mt-4 grid gap-3">
             <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300">
               Layout:{" "}
-              {uiMode === "ai" ? (
-                <span className="font-semibold text-violet-300">AI selected</span>
-              ) : (
-                <span className="font-semibold text-zinc-100">
-                  {currentHighlightConfig.layout}
-                </span>
-              )}
+              <span className="font-semibold text-zinc-100">
+                {currentHighlightConfig.layout}
+              </span>
             </div>
 
             <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300">

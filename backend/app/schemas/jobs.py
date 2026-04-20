@@ -49,6 +49,7 @@ class VideoProcessJobRequest(BaseModel):
     stacked_config: Optional[StackedConfig] = None
     captions: Optional[CaptionConfig] = None
     metadata: Optional[MetadataConfig] = None
+    crop_source: Optional[Literal["ai", "manual"]] = None
 
 
 class CaptionPlacement(BaseModel):
@@ -73,8 +74,14 @@ class EditableCaptionItem(BaseModel):
 
 class SubtitleRerenderJobRequest(BaseModel):
     input_video_path: str
-    captions_json_path: str
+    captions_json_path: Optional[str] = None
     items: list[EditableCaptionItem]
+
+
+class CropRerenderJobRequest(BaseModel):
+    input_path: str
+    stacked_config: StackedConfig
+    captions_ass_path: Optional[str] = None
 
 
 class JobCreateResponse(BaseModel):

@@ -6,53 +6,55 @@ import requests
 
 from app.services.vision_analysis import DEFAULT_OLLAMA_URL, DEFAULT_VISION_MODEL, OLLAMA_TIMEOUT_SECONDS
 
-LAYOUT_ANALYSIS_SCHEMA = {
+STACKED_CROP_SCHEMA = {
     "type": "object",
     "properties": {
-        "suggested_layout": {"type": "string", "enum": ["cropped", "fullscreen", "stacked"]},
-        "confidence": {"type": "number"},
-        "reasoning": {"type": "string"},
-        "top_crop_hint": {
-            "type": ["object", "null"],
+        "facecam_region": {
+            "type": "object",
             "properties": {
                 "x": {"type": "integer"},
                 "y": {"type": "integer"},
                 "w": {"type": "integer"},
                 "h": {"type": "integer"},
             },
+            "required": ["x", "y", "w", "h"],
         },
-        "bottom_crop_hint": {
-            "type": ["object", "null"],
+        "gameplay_region": {
+            "type": "object",
             "properties": {
                 "x": {"type": "integer"},
                 "y": {"type": "integer"},
                 "w": {"type": "integer"},
                 "h": {"type": "integer"},
             },
+            "required": ["x", "y", "w", "h"],
         },
+        "detection_notes": {"type": "string"},
     },
-    "required": ["suggested_layout", "confidence", "reasoning"],
+    "required": ["facecam_region", "gameplay_region", "detection_notes"],
 }
 
-LAYOUT_ANALYSIS_PROMPT = """You are a vertical short-form video layout expert (9:16, 1080×1920 output).
+STACKED_CROP_PROMPT = """You are analysing a single frame from a 1920×1080 gaming stream clip.
 
-Analyze this frame from a 1920×1080 gaming/streaming clip and recommend the best layout for converting it to vertical format.
+The user wants to export this clip as a stacked vertical video (9:16, 1080×1920) with two regions:
+- TOP region: the streamer's facecam / webcam overlay
+- BOTTOM region: the main gameplay area
 
-Layouts:
-- "cropped": Crop one 9:16 region from the landscape frame. Best when the main action fits within a single vertical crop.
-- "fullscreen": Letterbox/scale the full 16:9 frame into vertical space. Best for cinematic or wide content where cropping loses important context.
-- "stacked": Split the vertical output into a top section (e.g. facecam) and a bottom section (e.g. gameplay). Best when there is a distinct webcam overlay alongside gameplay content.
+Your job is to locate these two regions in the source frame. The source frame is always 1920×1080 pixels.
 
-Return valid JSON matching this schema:
+Instructions:
+- Identify the bounding box of the facecam/webcam overlay (usually a small inset in a corner).
+- Identify the bounding box of the primary gameplay content (usually the majority of the frame, excluding the facecam).
+- Return pixel coordinates as integers (x, y = top-left corner; w = width; h = height).
+- If no distinct facecam is visible, use the top-centre area as a fallback facecam region and the full frame as gameplay.
+- detection_notes should describe where you found each region (e.g. "Facecam in top-right corner, ~200×200px. Gameplay occupies full width below.").
+
+Return valid JSON only:
 {
-  "suggested_layout": "cropped" | "fullscreen" | "stacked",
-  "confidence": 0.0 to 1.0,
-  "reasoning": "brief one-sentence explanation",
-  "top_crop_hint": {"x": int, "y": int, "w": int, "h": int} | null,
-  "bottom_crop_hint": {"x": int, "y": int, "w": int, "h": int} | null
+  "facecam_region": {"x": int, "y": int, "w": int, "h": int},
+  "gameplay_region": {"x": int, "y": int, "w": int, "h": int},
+  "detection_notes": "one or two sentences describing what was detected"
 }
-
-Provide top_crop_hint and bottom_crop_hint only when suggesting "stacked". Coordinates are in source 1920×1080 pixels.
 """
 
 
@@ -88,8 +90,6 @@ def analyze_video_layout(
             "status": "skipped",
             "model": model_name or DEFAULT_VISION_MODEL,
             "reason": f"Frame not found: {image_path}",
-            "suggested_layout": None,
-            "confidence": None,
             "reasoning": None,
             "top_crop_hint": None,
             "bottom_crop_hint": None,
@@ -102,9 +102,9 @@ def analyze_video_layout(
         f"{ollama_url}/api/generate",
         json={
             "model": selected_model,
-            "prompt": LAYOUT_ANALYSIS_PROMPT,
+            "prompt": STACKED_CROP_PROMPT,
             "images": [encoded_image],
-            "format": LAYOUT_ANALYSIS_SCHEMA,
+            "format": STACKED_CROP_SCHEMA,
             "stream": False,
         },
         timeout=OLLAMA_TIMEOUT_SECONDS,
@@ -115,35 +115,22 @@ def analyze_video_layout(
     raw_text = str(response_json.get("response", "")).strip()
 
     if not raw_text:
-        raise ValueError("Empty response from layout analysis model")
+        raise ValueError("Empty response from stacked crop detection model")
 
     try:
         parsed = json.loads(raw_text)
     except json.JSONDecodeError as exc:
-        raise ValueError("Failed to parse JSON from layout analysis response") from exc
+        raise ValueError("Failed to parse JSON from stacked crop detection response") from exc
 
-    suggested_layout = parsed.get("suggested_layout")
-    if suggested_layout not in ("cropped", "fullscreen", "stacked"):
-        raise ValueError(f"Invalid suggested_layout value: {suggested_layout!r}")
-
-    confidence_raw = parsed.get("confidence")
-    try:
-        confidence = float(confidence_raw) if confidence_raw is not None else 0.0
-        confidence = max(0.0, min(1.0, confidence))
-    except (TypeError, ValueError):
-        confidence = 0.0
-
-    reasoning = str(parsed.get("reasoning", "")).strip()
-    top_crop_hint = _parse_crop_hint(parsed.get("top_crop_hint"))
-    bottom_crop_hint = _parse_crop_hint(parsed.get("bottom_crop_hint"))
+    detection_notes = str(parsed.get("detection_notes", "")).strip()
+    top_crop_hint = _parse_crop_hint(parsed.get("facecam_region"))
+    bottom_crop_hint = _parse_crop_hint(parsed.get("gameplay_region"))
 
     return {
         "applied": True,
         "status": "generated",
         "model": selected_model,
-        "suggested_layout": suggested_layout,
-        "confidence": confidence,
-        "reasoning": reasoning,
+        "reasoning": detection_notes,
         "top_crop_hint": top_crop_hint,
         "bottom_crop_hint": bottom_crop_hint,
     }

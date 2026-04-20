@@ -5,11 +5,15 @@ import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
 import type { DragMode, DragTarget, StackedConfig, UiMode } from "../types";
 
 type CropEditorModalProps = {
+  aiCropReasoning: string | null;
+  aiCropStatus: "success" | "failed" | null;
   bottomPreviewStyle: React.CSSProperties;
   cropDraft: StackedConfig;
   cropEditorPreviewUrl: string | null;
+  cropSource: "ai" | "manual" | null;
   hideModeBadge: boolean;
   isOpen: boolean;
+  isPostRenderMode: boolean;
   uiMode: UiMode;
   onClose: () => void;
   onLoadedData: (video: HTMLVideoElement) => void;
@@ -27,11 +31,15 @@ type CropEditorModalProps = {
 };
 
 export function CropEditorModal({
+  aiCropReasoning,
+  aiCropStatus,
   bottomPreviewStyle,
   cropDraft,
   cropEditorPreviewUrl,
+  cropSource,
   hideModeBadge,
   isOpen,
+  isPostRenderMode,
   uiMode,
   onClose,
   onLoadedData,
@@ -87,7 +95,7 @@ export function CropEditorModal({
               onClick={onSave}
               className="rounded-xl bg-violet-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-400"
             >
-              Save crop
+              {isPostRenderMode ? "Re-render with new crop" : "Save crop"}
             </button>
           </div>
         </div>
@@ -149,6 +157,40 @@ export function CropEditorModal({
           </div>
 
           <div className="space-y-4 overflow-auto">
+            {isPostRenderMode && cropSource === "ai" && (
+              <div className="rounded-2xl border border-violet-500/40 bg-violet-500/10 px-4 py-3 text-sm text-violet-200">
+                <p className="font-semibold">Originally auto-cropped by AI</p>
+                <p className="mt-1 text-xs opacity-80">
+                  The crop boxes below reflect the coordinates used in the original
+                  render. Adjust and save to trigger a new render with your changes.
+                </p>
+              </div>
+            )}
+
+            {aiCropStatus !== null && (
+              <div
+                className={`rounded-2xl border px-4 py-3 text-sm ${
+                  aiCropStatus === "success"
+                    ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
+                    : "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                }`}
+              >
+                <p className="font-semibold">
+                  {aiCropStatus === "success"
+                    ? "AI crop detection ran"
+                    : "AI crop detection failed"}
+                </p>
+                {aiCropReasoning && (
+                  <p className="mt-1 text-xs opacity-80">{aiCropReasoning}</p>
+                )}
+                <p className="mt-1 text-xs opacity-60">
+                  {aiCropStatus === "success"
+                    ? "Crop boxes pre-filled. Drag to adjust before saving."
+                    : "Default crop boxes shown. Drag to position manually."}
+                </p>
+              </div>
+            )}
+
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
               <h3 className="text-sm font-semibold text-zinc-100">Stack split</h3>
               <p className="mt-1 text-xs text-zinc-500">

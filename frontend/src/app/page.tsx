@@ -20,6 +20,7 @@ import { TwitchClipsPanel } from "./components/TwitchClipsPanel";
 import { TwitchUrlPanel } from "./components/TwitchUrlPanel";
 import type {
   CropBox,
+  CropRerenderJobResult,
   DownloadJobResult,
   DownloadedClip,
   DownloadedClipsResponse,
@@ -265,6 +266,13 @@ export default function Home() {
   const [pendingAnalysisProcessPath, setPendingAnalysisProcessPath] = useState<
     string | null
   >(null);
+  const [aiCropStatus, setAiCropStatus] = useState<"success" | "failed" | null>(null);
+  const [aiCropReasoning, setAiCropReasoning] = useState<string | null>(null);
+
+  const [cropRerenderJobId, setCropRerenderJobId] = useState<string | null>(null);
+  const [cropRerenderJobStatus, setCropRerenderJobStatus] =
+    useState<JobStatusResponse | null>(null);
+  const [isPostRenderCropMode, setIsPostRenderCropMode] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
@@ -275,6 +283,7 @@ export default function Home() {
   const submittedHighlightConfigRef = useRef<HighlightConfig>({
     ...DEFAULT_HIGHLIGHT_CONFIG,
   });
+  const cropSourceRef = useRef<"ai" | "manual">("manual");
 
   const processResult = useMemo(() => {
     return processJobStatus?.result as ProcessJobResult | null;
@@ -347,6 +356,7 @@ export default function Home() {
   );
 
   function buildProcessRequestBody(inputPath: string, config: HighlightConfig) {
+    const isAiMode = uiMode === "ai";
     return {
       input_path: inputPath,
       layout: config.layout,
@@ -358,25 +368,28 @@ export default function Home() {
               split_ratio_top: stackedConfig.split_ratio_top,
             }
           : null,
-      captions: {
-        enabled: true,
-        burn_in: true,
-        refine_with_llm: true,
-        refinement_model: "llama3.1:8b",
-        censor_subtitles: config.censor_subtitles,
-        default_style: {
-          color: config.subtitle_style.color,
-          font_family: config.subtitle_style.font_family,
-          font_size: config.subtitle_style.font_size,
-          outline: config.subtitle_style.outline,
-          shadow: config.subtitle_style.shadow,
-        },
-      },
+      captions: isAiMode
+        ? {
+            enabled: true,
+            burn_in: true,
+            refine_with_llm: true,
+            refinement_model: "llama3.1:8b",
+            censor_subtitles: config.censor_subtitles,
+            default_style: {
+              color: config.subtitle_style.color,
+              font_family: config.subtitle_style.font_family,
+              font_size: config.subtitle_style.font_size,
+              outline: config.subtitle_style.outline,
+              shadow: config.subtitle_style.shadow,
+            },
+          }
+        : { enabled: false },
       metadata: {
-        enabled: true,
-        vision_model: "llava-llama3:8b",
-        metadata_model: "llama3.1:8b",
+        enabled: isAiMode,
+        vision_model: isAiMode ? "llava-llama3:8b" : null,
+        metadata_model: isAiMode ? "llama3.1:8b" : null,
       },
+      crop_source: cropSourceRef.current,
     };
   }
 
@@ -536,11 +549,6 @@ export default function Home() {
   }, [generatedCaptionItems]);
 
   function openConfigureHighlight() {
-    if (uiMode === "ai") {
-      void startConfiguredPipeline(highlightConfig);
-      return;
-    }
-
     setHighlightConfigDraft({
       layout,
       subtitle_style: {
@@ -581,6 +589,12 @@ export default function Home() {
     setLayoutAnalysisJobId(null);
     setLayoutAnalysisJobStatus(null);
     setPendingAnalysisProcessPath(null);
+    setAiCropStatus(null);
+    setAiCropReasoning(null);
+    cropSourceRef.current = "manual";
+    setCropRerenderJobId(null);
+    setCropRerenderJobStatus(null);
+    setIsPostRenderCropMode(false);
 
     try {
       if (config.layout === "stacked" && !stackedConfigIsValid) {
@@ -642,39 +656,38 @@ export default function Home() {
           throw new Error("Please select a downloaded file.");
         }
 
-        if (uiMode === "ai") {
-          setPipelineStage("analyzing_layout");
-          setPipelineMessage("Analyzing layout with AI...");
-          setPendingAnalysisProcessPath(selectedDownloadedPath);
-
-          const analysisResponse = await fetch(
-            `${API_BASE_URL}/jobs/analyze-layout`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                input_path: selectedDownloadedPath,
-                vision_model: null,
-              }),
-            }
-          );
-
-          if (!analysisResponse.ok) {
-            const errorText = await analysisResponse.text();
-            throw new Error(
-              `Layout analysis job failed to start (${analysisResponse.status}): ${errorText}`
-            );
-          }
-
-          const analysisData: JobCreateResponse = await analysisResponse.json();
-          setLayoutAnalysisJobId(analysisData.job_id);
-          return;
-        }
-
         if (config.layout === "stacked") {
-          setPipelineStage("awaiting_crop");
-          setPipelineMessage("Confirm your stacked crop to continue.");
-          openCropEditor(undefined, selectedDownloadedPath);
+          if (uiMode === "ai") {
+            setPipelineStage("analyzing_layout");
+            setPipelineMessage("Analysing stacked crop regions with AI...");
+            setPendingAnalysisProcessPath(selectedDownloadedPath);
+
+            const analysisResponse = await fetch(
+              `${API_BASE_URL}/jobs/analyze-layout`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  input_path: selectedDownloadedPath,
+                  vision_model: null,
+                }),
+              }
+            );
+
+            if (!analysisResponse.ok) {
+              const errorText = await analysisResponse.text();
+              throw new Error(
+                `Layout analysis job failed to start (${analysisResponse.status}): ${errorText}`
+              );
+            }
+
+            const analysisData: JobCreateResponse = await analysisResponse.json();
+            setLayoutAnalysisJobId(analysisData.job_id);
+          } else {
+            setPipelineStage("awaiting_crop");
+            setPipelineMessage("Confirm your stacked crop to continue.");
+            openCropEditor(undefined, selectedDownloadedPath);
+          }
           return;
         }
 
@@ -790,6 +803,15 @@ export default function Home() {
     setDragState(null);
     setCropEditorPreviewUrlOverride(null);
     setPendingCropProcessPath(null);
+
+    if (isPostRenderCropMode) {
+      setIsPostRenderCropMode(false);
+      setCropEditorRequiresConfirmation(false);
+      setPipelineStage("completed");
+      setPipelineMessage("Crop adjustment cancelled. Original render preserved.");
+      return;
+    }
+
     if (cropEditorRequiresConfirmation) {
       setPipelineStage("awaiting_crop");
       setPipelineMessage(
@@ -803,16 +825,23 @@ export default function Home() {
   }
 
   function saveCropEditor() {
-    setStackedConfig({
+    const newConfig: StackedConfig = {
       top_crop: roundBox(cropDraft.top_crop),
       bottom_crop: roundBox(cropDraft.bottom_crop),
       split_ratio_top: cropDraft.split_ratio_top,
-    });
+    };
 
+    setStackedConfig(newConfig);
     setIsCropEditorOpen(false);
     setDragState(null);
     setCropEditorPreviewUrlOverride(null);
     setCropEditorRequiresConfirmation(false);
+
+    if (isPostRenderCropMode) {
+      setIsPostRenderCropMode(false);
+      void startCropRerender(newConfig);
+      return;
+    }
 
     if (pendingCropProcessPath) {
       setPipelineStage("processing");
@@ -824,6 +853,84 @@ export default function Home() {
 
     setPipelineStage("idle");
     setPipelineMessage("Crop updated.");
+  }
+
+  function openCropAdjust() {
+    const configUsed = processResult?.stacked_config_used ?? stackedConfig;
+    const inputPath = processJobStatus?.payload?.input_path as string | undefined;
+
+    const matchingClip = inputPath
+      ? downloadedClips.find((c) => c.download_path === inputPath)
+      : null;
+    const previewUrl = matchingClip
+      ? `${API_BASE_URL}${matchingClip.url}`
+      : cropEditorPreviewUrl;
+
+    if (!previewUrl) {
+      setRequestError(
+        "Cannot open crop editor: original source video not available."
+      );
+      return;
+    }
+
+    setCropDraft({
+      top_crop: { ...configUsed.top_crop },
+      bottom_crop: { ...configUsed.bottom_crop },
+      split_ratio_top: configUsed.split_ratio_top,
+    });
+
+    setCropEditorPreviewUrlOverride(previewUrl);
+    setIsPostRenderCropMode(true);
+    setIsCropEditorOpen(true);
+  }
+
+  async function startCropRerender(newConfig: StackedConfig) {
+    const inputPath = processJobStatus?.payload?.input_path as string | undefined;
+    const captionsAssPath = processResult?.captions?.ass_path ?? null;
+
+    if (!inputPath) {
+      setRequestError("Cannot re-render: original source path not found.");
+      return;
+    }
+
+    setRequestError(null);
+    setPipelineStage("processing");
+    setPipelineMessage("Starting crop re-render with updated crop...");
+    cropSourceRef.current = "manual";
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/jobs/crop-rerender`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input_path: inputPath,
+          stacked_config: newConfig,
+          captions_ass_path: captionsAssPath,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to create crop rerender job (${response.status}): ${errorText}`
+        );
+      }
+
+      const data: JobCreateResponse = await response.json();
+      setCropRerenderJobId(data.job_id);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown crop rerender error";
+      setRequestError(message);
+      setPipelineStage("failed");
+      setPipelineMessage("Crop rerender failed to start.");
+    }
+  }
+
+  function openAddSubtitles() {
+    setSubtitleDrafts([]);
+    setSavedSubtitleDrafts([]);
+    setIsSubtitleEditorOpen(true);
   }
 
   function openSubtitleEditor() {
@@ -914,11 +1021,11 @@ export default function Home() {
     const inputVideoPath =
       (baseResult as (ProcessJobResult & { base_output_path?: string }) | null)
         ?.base_output_path ?? baseResult?.output_path;
-    const captionsJsonPath = baseResult?.captions?.captions_json_path;
+    const captionsJsonPath = baseResult?.captions?.captions_json_path ?? null;
 
-    if (!inputVideoPath || !captionsJsonPath) {
+    if (!inputVideoPath) {
       setRequestError(
-        "Subtitle rerender requires an existing processed video and captions JSON."
+        "Subtitle rerender requires an existing processed video."
       );
       return;
     }
@@ -1070,51 +1177,48 @@ export default function Home() {
           const submittedLayout = submittedHighlightConfigRef.current.layout;
           const submittedSourceMode = submittedSourceModeRef.current;
 
-          if (uiMode === "ai") {
+          if (submittedLayout === "stacked" && submittedSourceMode !== "downloaded_file") {
             setSelectedDownloadedPath(path);
-            setPipelineStage("analyzing_layout");
-            setPipelineMessage("Download complete — analyzing layout with AI...");
-            setPendingAnalysisProcessPath(path);
-            clearInterval(intervalId);
-            setDownloadJobId(null);
 
-            try {
-              const analysisResponse = await fetch(
-                `${API_BASE_URL}/jobs/analyze-layout`,
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    input_path: path,
-                    vision_model: null,
-                  }),
-                }
-              );
+            if (uiMode === "ai") {
+              setPipelineStage("analyzing_layout");
+              setPipelineMessage("Download complete — analysing stacked crop regions with AI...");
+              setPendingAnalysisProcessPath(path);
+              clearInterval(intervalId);
+              setDownloadJobId(null);
 
-              if (!analysisResponse.ok) {
-                const errorText = await analysisResponse.text();
-                throw new Error(
-                  `Layout analysis job failed to start (${analysisResponse.status}): ${errorText}`
+              try {
+                const analysisResponse = await fetch(
+                  `${API_BASE_URL}/jobs/analyze-layout`,
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      input_path: path,
+                      vision_model: null,
+                    }),
+                  }
                 );
+
+                if (!analysisResponse.ok) {
+                  const errorText = await analysisResponse.text();
+                  throw new Error(
+                    `Layout analysis job failed to start (${analysisResponse.status}): ${errorText}`
+                  );
+                }
+
+                const analysisData: JobCreateResponse = await analysisResponse.json();
+                setLayoutAnalysisJobId(analysisData.job_id);
+              } catch (error) {
+                const message =
+                  error instanceof Error ? error.message : "Layout analysis request error";
+                setRequestError(message);
+                setPipelineStage("failed");
+                setPipelineMessage("Layout analysis failed to start.");
               }
-
-              const analysisData: JobCreateResponse = await analysisResponse.json();
-              setLayoutAnalysisJobId(analysisData.job_id);
-            } catch (error) {
-              const message =
-                error instanceof Error ? error.message : "Layout analysis request error";
-              setRequestError(message);
-              setPipelineStage("failed");
-              setPipelineMessage("Layout analysis failed to start.");
+              return;
             }
-            return;
-          }
 
-          if (
-            submittedLayout === "stacked" &&
-            submittedSourceMode !== "downloaded_file"
-          ) {
-            setSelectedDownloadedPath(path);
             setPipelineStage("awaiting_crop");
             setPipelineMessage("Download complete — waiting for crop confirmation.");
             openCropEditor(previewUrl ?? undefined, path);
@@ -1273,67 +1377,76 @@ export default function Home() {
 
         if (data.status === "queued" || data.status === "processing") {
           setPipelineStage("analyzing_layout");
-          setPipelineMessage("Analyzing video layout with AI...");
+          setPipelineMessage("Analysing stacked crop regions with AI...");
         }
 
         if (data.status === "completed") {
           const result = data.result as LayoutAnalysisJobResult | null;
-          const suggestedLayout = result?.suggested_layout ?? "cropped";
           const topCropHint = result?.top_crop_hint;
           const bottomCropHint = result?.bottom_crop_hint;
-
-          if (topCropHint && bottomCropHint && suggestedLayout === "stacked") {
-            setStackedConfig((current) => ({
-              top_crop: {
-                x: topCropHint.x,
-                y: topCropHint.y,
-                w: topCropHint.w,
-                h: topCropHint.h,
-              },
-              bottom_crop: {
-                x: bottomCropHint.x,
-                y: bottomCropHint.y,
-                w: bottomCropHint.w,
-                h: bottomCropHint.h,
-              },
-              split_ratio_top: current.split_ratio_top,
-            }));
-          }
-
-          const aiConfig: HighlightConfig = {
-            ...submittedHighlightConfigRef.current,
-            layout: suggestedLayout,
-          };
-          submittedHighlightConfigRef.current = aiConfig;
-          setLayout(suggestedLayout);
-          setHighlightConfig(aiConfig);
+          const hasValidHints =
+            topCropHint &&
+            bottomCropHint &&
+            topCropHint.w > 0 &&
+            topCropHint.h > 0 &&
+            bottomCropHint.w > 0 &&
+            bottomCropHint.h > 0;
 
           const processPath = pendingAnalysisProcessPath;
-
-          if (suggestedLayout === "stacked" && processPath) {
-            setPipelineStage("awaiting_crop");
-            setPipelineMessage(
-              `AI suggested stacked layout — confirm crop to continue.`
-            );
-            openCropEditor(undefined, processPath);
-          } else if (processPath) {
-            setPipelineStage("processing");
-            setPipelineMessage(
-              `AI suggested "${suggestedLayout}" layout — starting render...`
-            );
-            setDownloadedPath(processPath);
-          }
-
           setPendingAnalysisProcessPath(null);
           setLayoutAnalysisJobId(null);
           clearInterval(intervalId);
+
+          if (hasValidHints) {
+            setStackedConfig({
+              top_crop: {
+                x: topCropHint!.x,
+                y: topCropHint!.y,
+                w: topCropHint!.w,
+                h: topCropHint!.h,
+              },
+              bottom_crop: {
+                x: bottomCropHint!.x,
+                y: bottomCropHint!.y,
+                w: bottomCropHint!.w,
+                h: bottomCropHint!.h,
+              },
+              split_ratio_top: DEFAULT_STACKED_CONFIG.split_ratio_top,
+            });
+            setAiCropStatus("success");
+            cropSourceRef.current = "ai";
+            setPipelineStage("processing");
+            setPipelineMessage(
+              `AI detected crop regions — processing automatically.${result?.reasoning ? ` (${result.reasoning})` : ""}`
+            );
+            setDownloadedPath(processPath);
+          } else {
+            setAiCropStatus("failed");
+            setAiCropReasoning(
+              result?.reasoning
+                ? `Detection returned unusable coordinates. ${result.reasoning}`
+                : "AI returned no usable crop coordinates."
+            );
+            setPipelineStage("awaiting_crop");
+            setPipelineMessage("AI crop detection could not determine valid regions — manual crop required.");
+            if (processPath) {
+              openCropEditor(undefined, processPath);
+            }
+          }
         }
 
         if (data.status === "failed") {
-          setPipelineStage("failed");
-          setPipelineMessage("Layout analysis failed.");
-          clearInterval(intervalId);
+          setAiCropStatus("failed");
+          setAiCropReasoning("AI crop detection job failed. Using default crop boxes.");
+          const processPath = pendingAnalysisProcessPath;
+          setPendingAnalysisProcessPath(null);
           setLayoutAnalysisJobId(null);
+          clearInterval(intervalId);
+          setPipelineStage("awaiting_crop");
+          setPipelineMessage("AI crop detection failed — manual crop required.");
+          if (processPath) {
+            openCropEditor(undefined, processPath);
+          }
         }
       } catch (error) {
         const message =
@@ -1427,6 +1540,87 @@ export default function Home() {
   }, [subtitleRerenderJobId]);
 
   useEffect(() => {
+    if (!cropRerenderJobId) return;
+
+    async function fetchCropRerenderJobStatus() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/jobs/${cropRerenderJobId}`);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `Failed to fetch crop rerender job status (${response.status}): ${errorText}`
+          );
+        }
+
+        const data: JobStatusResponse = await response.json();
+        setCropRerenderJobStatus(data);
+
+        if (data.status === "queued") {
+          setPipelineStage("processing");
+          setPipelineMessage("Crop rerender queued...");
+        }
+
+        if (data.status === "processing") {
+          setPipelineStage("processing");
+          setPipelineMessage("Rendering updated stacked crop...");
+        }
+
+        if (data.status === "completed") {
+          const result = data.result as CropRerenderJobResult | null;
+
+          if (result?.output_url) {
+            setProcessJobStatus((current) => {
+              if (!current) return current;
+              const currentResult = current.result as ProcessJobResult | null;
+              return {
+                ...current,
+                result: {
+                  ...currentResult,
+                  output_url: result.output_url,
+                  filename: result.filename ?? currentResult?.filename,
+                  stacked_config_used:
+                    result.stacked_config_used ?? currentResult?.stacked_config_used,
+                  crop_source: result.crop_source ?? "manual",
+                },
+              };
+            });
+          }
+
+          setSubtitleRerenderJobStatus(null);
+          setPipelineStage("completed");
+          setPipelineMessage("Crop re-render complete.");
+          setCropRerenderJobId(null);
+          clearInterval(intervalId);
+        }
+
+        if (data.status === "failed") {
+          setPipelineStage("failed");
+          setPipelineMessage("Crop rerender failed.");
+          setCropRerenderJobId(null);
+          clearInterval(intervalId);
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unknown crop rerender polling error";
+        setRequestError(message);
+        setPipelineStage("failed");
+        setPipelineMessage("Crop rerender polling failed.");
+        clearInterval(intervalId);
+      }
+    }
+
+    const intervalId = setInterval(() => {
+      void fetchCropRerenderJobStatus();
+    }, 2000);
+    void fetchCropRerenderJobStatus();
+
+    return () => clearInterval(intervalId);
+  }, [cropRerenderJobId]);
+
+  useEffect(() => {
     if (
       (pipelineStage === "processing" ||
         pipelineStage === "subtitle_rerender") &&
@@ -1456,8 +1650,6 @@ export default function Home() {
       ? "Processing..."
       : pipelineStage === "subtitle_rerender"
       ? "Applying subtitle edits..."
-      : uiMode === "ai"
-      ? "Start AI Pipeline"
       : "Configure Highlight";
 
   const statusTone =
@@ -1632,6 +1824,8 @@ export default function Home() {
             )}
 
             <OutputPreviewPanel
+              onAddSubtitles={openAddSubtitles}
+              onOpenCropAdjust={openCropAdjust}
               onOpenSubtitleEditor={openSubtitleEditor}
               outputVideoUrl={outputVideoUrl}
               pipelineMessage={pipelineMessage}
@@ -1639,6 +1833,7 @@ export default function Home() {
               processJobStatus={processJobStatus}
               sectionRef={outputPreviewRef}
               statusTone={statusTone}
+              uiMode={uiMode}
             />
           </section>
         </div>
@@ -1648,6 +1843,7 @@ export default function Home() {
         draftConfig={highlightConfigDraft}
         isOpen={isConfigureHighlightOpen}
         isSubmitting={isSubmitting}
+        uiMode={uiMode}
         onChangeColor={(color) =>
           setHighlightConfigDraft((current) => ({
             ...current,
@@ -1677,11 +1873,15 @@ export default function Home() {
       />
 
       <CropEditorModal
+        aiCropReasoning={aiCropReasoning}
+        aiCropStatus={aiCropStatus}
         bottomPreviewStyle={bottomPreviewStyle}
         cropDraft={cropDraft}
         cropEditorPreviewUrl={cropEditorPreviewUrl}
+        cropSource={processResult?.crop_source ?? null}
         hideModeBadge={hideModeBadge}
         isOpen={isCropEditorOpen}
+        isPostRenderMode={isPostRenderCropMode}
         uiMode={uiMode}
         onClose={closeCropEditor}
         onLoadedData={(video) => {
