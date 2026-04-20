@@ -12,6 +12,7 @@ from app.schemas.jobs import (
     VideoProcessJobRequest,
 )
 from app.services.caption_refinement import refine_captions_json
+from app.services.profanity_filter import censor_captions_json
 from app.services.jobs import create_job, get_job, update_job_status, list_jobs
 from app.services.metadata import (
     apply_generated_metadata,
@@ -191,6 +192,9 @@ def process_video_job(
                 captions_json_path=captions_json_path,
                 default_style=default_caption_style,
             )
+
+            if censor_subtitles:
+                censor_captions_json(captions_json_path)
 
             srt_filename = f"{stem}_{layout}_{short_job_id}_styled.srt"
             srt_result = write_srt_from_captions_json(

@@ -76,17 +76,6 @@ const DEFAULT_HIGHLIGHT_CONFIG: HighlightConfig = {
   censor_subtitles: false,
 };
 
-const SOURCE_MODE_LABELS: Record<SourceMode, string> = {
-  twitch_clips: "Twitch Clips",
-  twitch_url: "Twitch Clip URL",
-  downloaded_file: "Downloaded File",
-};
-
-const LAYOUT_LABELS: Record<LayoutOption, string> = {
-  cropped: "Cropped",
-  fullscreen: "Fullscreen",
-  stacked: "Stacked",
-};
 
 function sanitizeCaptionDraft(caption: EditableCaptionDraft): EditableCaptionDraft {
   const start = Number.isFinite(caption.start) ? Math.max(0, caption.start) : 0;
@@ -210,6 +199,7 @@ export default function Home() {
   const [subtitleRerenderJobStatus, setSubtitleRerenderJobStatus] =
     useState<JobStatusResponse | null>(null);
   const [isApplyingSubtitleEdits, setIsApplyingSubtitleEdits] = useState(false);
+  const [processingDurationMs, setProcessingDurationMs] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [pipelineStage, setPipelineStage] = useState<PipelineStage>("idle");
@@ -284,6 +274,7 @@ export default function Home() {
     ...DEFAULT_HIGHLIGHT_CONFIG,
   });
   const cropSourceRef = useRef<"ai" | "manual">("manual");
+  const processStartedAtRef = useRef<number | null>(null);
 
   const processResult = useMemo(() => {
     return processJobStatus?.result as ProcessJobResult | null;
@@ -592,6 +583,8 @@ export default function Home() {
     setAiCropStatus(null);
     setAiCropReasoning(null);
     cropSourceRef.current = "manual";
+    processStartedAtRef.current = null;
+    setProcessingDurationMs(null);
     setCropRerenderJobId(null);
     setCropRerenderJobStatus(null);
     setIsPostRenderCropMode(false);
@@ -708,6 +701,7 @@ export default function Home() {
 
         const data: JobCreateResponse = await response.json();
         setProcessJobId(data.job_id);
+        processStartedAtRef.current = Date.now();
         setPipelineStage("processing");
         setPipelineMessage("Processing downloaded file...");
       }
@@ -732,7 +726,7 @@ export default function Home() {
         outline: DEFAULT_SUBTITLE_STYLE.outline,
         shadow: DEFAULT_SUBTITLE_STYLE.shadow,
       },
-      censor_subtitles: false,
+      censor_subtitles: highlightConfigDraft.censor_subtitles,
     };
 
     setIsConfigureHighlightOpen(false);
@@ -1288,6 +1282,7 @@ export default function Home() {
 
         const data: JobCreateResponse = await response.json();
         setProcessJobId(data.job_id);
+        processStartedAtRef.current = Date.now();
       } catch (error) {
         const message =
           error instanceof Error
@@ -1330,6 +1325,9 @@ export default function Home() {
         }
 
         if (data.status === "completed") {
+          if (processStartedAtRef.current) {
+            setProcessingDurationMs(Date.now() - processStartedAtRef.current);
+          }
           setPipelineStage("completed");
           setPipelineMessage("Render complete.");
           clearInterval(intervalId);
@@ -1657,22 +1655,16 @@ export default function Home() {
       ? "text-green-400"
       : overallStatus === "failed"
       ? "text-red-400"
+      : overallStatus === "awaiting_crop"
+      ? "text-amber-400"
       : overallStatus === "submitting" ||
         overallStatus === "downloading" ||
         overallStatus === "download_complete" ||
         overallStatus === "analyzing_layout" ||
-        overallStatus === "awaiting_crop" ||
         overallStatus === "processing" ||
         overallStatus === "subtitle_rerender"
-      ? "text-amber-400"
-      : "text-zinc-300";
-
-  const selectedItemLabel =
-    sourceMode === "twitch_clips"
-      ? selectedTwitchClip?.title || "No clip selected"
-      : sourceMode === "twitch_url"
-      ? clipUrl || "No URL entered"
-      : selectedDownloadedClip?.filename || "No file selected";
+      ? "text-blue-400"
+      : "text-zinc-400";
 
   const topPreviewStyle = {
     left: `${(cropDraft.top_crop.x / videoNaturalSize.width) * videoDisplaySize.width}px`,
@@ -1755,51 +1747,10 @@ export default function Home() {
               processJobStatus={processJobStatus}
               requestError={requestError}
               sourceMode={sourceMode}
-              statusTone={statusTone}
             />
           </aside>
 
           <section className="space-y-6">
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold">Workspace Summary</h2>
-                  <p className="mt-1 text-sm text-zinc-500">
-                    Current editor context for the active source and output setup.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                    Active Source
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-zinc-100">
-                    {SOURCE_MODE_LABELS[sourceMode] ?? sourceMode}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                    Layout
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-zinc-100">
-                    {LAYOUT_LABELS[layout] ?? layout}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                    Selected Item
-                  </p>
-                  <p className="mt-1 break-all text-sm font-semibold text-zinc-100">
-                    {selectedItemLabel}
-                  </p>
-                </div>
-              </div>
-            </div>
-
             {sourceMode === "twitch_clips" ? (
               <TwitchClipsPanel
                 selectedTwitchClip={selectedTwitchClip}
@@ -1831,8 +1782,8 @@ export default function Home() {
               pipelineMessage={pipelineMessage}
               pipelineStage={pipelineStage}
               processJobStatus={processJobStatus}
+              processingDurationMs={processingDurationMs}
               sectionRef={outputPreviewRef}
-              statusTone={statusTone}
               uiMode={uiMode}
             />
           </section>
@@ -1870,6 +1821,12 @@ export default function Home() {
         }
         onClose={closeConfigureHighlight}
         onConfirm={confirmConfigureHighlight}
+        onToggleCensor={() =>
+          setHighlightConfigDraft((current) => ({
+            ...current,
+            censor_subtitles: !current.censor_subtitles,
+          }))
+        }
       />
 
       <CropEditorModal

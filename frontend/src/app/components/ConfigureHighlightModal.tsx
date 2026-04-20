@@ -12,6 +12,7 @@ type ConfigureHighlightModalProps = {
   onChangeLayout: (layout: LayoutOption) => void;
   onClose: () => void;
   onConfirm: () => void;
+  onToggleCensor: () => void;
 };
 
 const FONT_OPTIONS: Array<{
@@ -104,6 +105,7 @@ export function ConfigureHighlightModal({
   onChangeLayout,
   onClose,
   onConfirm,
+  onToggleCensor,
 }: ConfigureHighlightModalProps) {
   const isAiMode = uiMode === "ai";
   if (!isOpen) return null;
@@ -219,22 +221,36 @@ export function ConfigureHighlightModal({
             </section>
           )}
 
-          <section className="rounded-2xl border border-zinc-800 bg-black px-4 py-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-base font-semibold text-zinc-100">
-                  Censor Subtitles
-                </h3>
-                <p className="mt-1 text-sm text-zinc-500">
-                  Filter profanity from subtitles. Coming later.
-                </p>
-              </div>
+          {isAiMode && (
+            <section className="rounded-2xl border border-zinc-800 bg-black px-4 py-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-semibold text-zinc-100">
+                    Censor Subtitles
+                  </h3>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Replace profanity with asterisks (e.g. f***) in the burned-in subtitles.
+                  </p>
+                </div>
 
-              <div className="relative mt-1 h-7 w-12 rounded-full bg-zinc-900 opacity-60">
-                <div className="absolute right-1 top-1 h-5 w-5 rounded-full bg-zinc-100" />
+                <button
+                  type="button"
+                  onClick={onToggleCensor}
+                  disabled={isSubmitting}
+                  aria-pressed={draftConfig.censor_subtitles}
+                  className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${
+                    draftConfig.censor_subtitles ? "bg-violet-500" : "bg-zinc-700"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                      draftConfig.censor_subtitles ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
               </div>
-            </div>
-          </section>
+            </section>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 border-t border-zinc-800 px-6 py-5">

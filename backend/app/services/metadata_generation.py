@@ -92,26 +92,26 @@ def _build_metadata_prompt(metadata_payload: dict, transcript_text: str) -> str:
 
     context_json = json.dumps(compact_context, ensure_ascii=False, indent=2)
 
-    return f"""You are helping generate draft metadata for a short-form vertical video clip.
+    return f"""You are helping generate draft metadata for a short-form vertical video clip intended for TikTok and YouTube Shorts.
 
 Your task is to produce:
 - 3 short title suggestions
-- 8 concise hashtag suggestions
+- 10 hashtag suggestions
 - 1 short summary
 
 Rules:
 - Stay grounded primarily in the provided transcript text
 - Use vision notes only as light supporting context
 - Do not invent specific game details, names, or events unless clearly supported
-- Keep titles short and suitable for TikTok / YouTube Shorts style clips
-- Hashtags should be concise, without the # symbol
-- Summary should be 1 to 2 sentences max
+- Titles should be punchy, attention-grabbing, and suitable for TikTok — use natural hype language, rhetorical questions, or reaction phrasing (e.g. "this clip is INSANE", "wait for it...", "no way this happened")
+- Hashtags must follow TikTok convention: always include discovery tags (fyp, foryou, foryoupage) and platform tags (twitch, twitchclips, twitchstreams, gaming), then add 4-5 clip-specific tags based on what happened. All lowercase, no spaces, no # symbol in the returned strings.
+- Summary should be 1 to 2 sentences max, written as a plain description of what happened
 - If the context is weak, stay generic rather than hallucinating
 
 Return JSON only in exactly this shape:
 {{
   "title_suggestions": ["...", "...", "..."],
-  "hashtag_suggestions": ["...", "...", "..."],
+  "hashtag_suggestions": ["fyp", "twitch", "..."],
   "summary": "..."
 }}
 
@@ -171,10 +171,10 @@ def generate_metadata_suggestions(
     ][:3]
 
     clean_hashtags = [
-        str(item).strip().lstrip("#")
+        str(item).strip().lstrip("#").lower()
         for item in hashtag_suggestions
         if str(item).strip()
-    ][:8]
+    ][:10]
 
     clean_summary = summary.strip()
 

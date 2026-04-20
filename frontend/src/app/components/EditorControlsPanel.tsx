@@ -62,7 +62,28 @@ export function EditorControlsPanel({
       <div>
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-xl font-semibold">Editor Controls</h2>
-          {!hideModeBadge && (
+          {!hideModeBadge && uiModeLocked && (
+            <span
+              className={`rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest ${
+                uiMode === "ai"
+                  ? "bg-violet-500/25 text-violet-200 ring-2 ring-violet-500/50"
+                  : "bg-zinc-700 text-zinc-300 ring-2 ring-zinc-600"
+              }`}
+            >
+              {uiMode === "ai" ? "AI Mode" : "Manual Mode"}
+            </span>
+          )}
+        </div>
+        <p className="mt-2 text-sm leading-6 text-zinc-400">
+          {uiMode === "ai"
+            ? "AI transcribes, refines captions, and auto-detects stacked crop regions."
+            : "FFmpeg-only processing. Crops and subtitles are set manually."}
+        </p>
+        {!uiModeLocked && !hideModeBadge && (
+          <div className="mt-4 flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+            <span className="text-xs font-medium text-zinc-500">
+              Research Mode:
+            </span>
             <span
               className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
                 uiMode === "ai"
@@ -72,21 +93,14 @@ export function EditorControlsPanel({
             >
               {uiMode === "ai" ? "AI Mode" : "Manual Mode"}
             </span>
-          )}
-        </div>
-        <p className="mt-2 text-sm leading-6 text-zinc-400">
-          {uiMode === "ai"
-            ? "AI will analyse the clip and select the best layout automatically."
-            : "Choose a source, then open the quick highlight setup before starting the pipeline."}
-        </p>
-        {!uiModeLocked && (
-          <button
-            type="button"
-            onClick={onToggleUiMode}
-            className="mt-3 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-400 transition hover:border-violet-500/60 hover:text-violet-300"
-          >
-            Switch to {uiMode === "ai" ? "Manual" : "AI"} Mode
-          </button>
+            <button
+              type="button"
+              onClick={onToggleUiMode}
+              className="ml-auto rounded-lg border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-400 transition hover:border-violet-500/60 hover:text-violet-300"
+            >
+              Switch to {uiMode === "ai" ? "Manual" : "AI"}
+            </button>
+          </div>
         )}
       </div>
 
@@ -228,27 +242,31 @@ export function EditorControlsPanel({
               </span>
             </div>
 
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300">
-              Font:{" "}
-              <span
-                className="font-semibold text-zinc-100"
-                style={{
-                  fontFamily: currentHighlightConfig.subtitle_style.font_family,
-                }}
-              >
-                {currentHighlightConfig.subtitle_style.font_family}
-              </span>
-            </div>
+            {uiMode === "ai" && (
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300">
+                Font:{" "}
+                <span
+                  className="font-semibold text-zinc-100"
+                  style={{
+                    fontFamily: currentHighlightConfig.subtitle_style.font_family,
+                  }}
+                >
+                  {currentHighlightConfig.subtitle_style.font_family}
+                </span>
+              </div>
+            )}
 
-            <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300">
-              <span>Subtitle Color</span>
-              <span
-                className="inline-block h-6 w-12 rounded-md border border-zinc-700"
-                style={{
-                  backgroundColor: currentHighlightConfig.subtitle_style.color,
-                }}
-              />
-            </div>
+            {uiMode === "ai" && (
+              <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300">
+                <span>Subtitle Color</span>
+                <span
+                  className="inline-block h-6 w-12 rounded-md border border-zinc-700"
+                  style={{
+                    backgroundColor: currentHighlightConfig.subtitle_style.color,
+                  }}
+                />
+              </div>
+            )}
           </div>
         </div>
 
