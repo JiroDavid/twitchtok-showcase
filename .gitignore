@@ -29,3 +29,6 @@ backend/storage/outputs/*
 !backend/storage/downloads/.gitkeep
 !backend/storage/temp/.gitkeep
 !backend/storage/outputs/.gitkeep
+
+# AI assistant context (local only)
+CLAUDE.md
