@@ -1750,7 +1750,7 @@ export default function Home() {
             />
           </aside>
 
-          <section className="space-y-6">
+          <section>
             {sourceMode === "twitch_clips" ? (
               <TwitchClipsPanel
                 selectedTwitchClip={selectedTwitchClip}
@@ -1773,20 +1773,22 @@ export default function Home() {
                 onSelectDownloadedClip={handleSelectDownloadedClip}
               />
             )}
-
-            <OutputPreviewPanel
-              onAddSubtitles={openAddSubtitles}
-              onOpenCropAdjust={openCropAdjust}
-              onOpenSubtitleEditor={openSubtitleEditor}
-              outputVideoUrl={outputVideoUrl}
-              pipelineMessage={pipelineMessage}
-              pipelineStage={pipelineStage}
-              processJobStatus={processJobStatus}
-              processingDurationMs={processingDurationMs}
-              sectionRef={outputPreviewRef}
-              uiMode={uiMode}
-            />
           </section>
+        </div>
+
+        <div className="mt-6">
+          <OutputPreviewPanel
+            onAddSubtitles={openAddSubtitles}
+            onOpenCropAdjust={openCropAdjust}
+            onOpenSubtitleEditor={openSubtitleEditor}
+            outputVideoUrl={outputVideoUrl}
+            pipelineMessage={pipelineMessage}
+            pipelineStage={pipelineStage}
+            processJobStatus={processJobStatus}
+            processingDurationMs={processingDurationMs}
+            sectionRef={outputPreviewRef}
+            uiMode={uiMode}
+          />
         </div>
       </div>
 
