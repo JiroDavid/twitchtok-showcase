@@ -47,7 +47,7 @@ import type {
 } from "./types";
 import { clamp, roundBox } from "./utils";
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "";
 
 const DEFAULT_STACKED_CONFIG: StackedConfig = {
   top_crop: { x: 1340, y: 40, w: 520, h: 520 },
@@ -1778,6 +1778,7 @@ export default function Home() {
 
         <div className="mt-6">
           <OutputPreviewPanel
+            captionItems={generatedCaptionItems}
             onAddSubtitles={openAddSubtitles}
             onOpenCropAdjust={openCropAdjust}
             onOpenSubtitleEditor={openSubtitleEditor}

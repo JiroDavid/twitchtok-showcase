@@ -71,6 +71,7 @@ function stageColor(stage: PipelineStage) {
 }
 
 type OutputPreviewPanelProps = {
+  captionItems: MetadataJsonCaptionsEntry[];
   onAddSubtitles: () => void;
   onOpenCropAdjust: () => void;
   onOpenSubtitleEditor: () => void;
@@ -110,6 +111,7 @@ function formatSeconds(value: number | undefined) {
 }
 
 export function OutputPreviewPanel({
+  captionItems,
   onAddSubtitles,
   onOpenCropAdjust,
   onOpenSubtitleEditor,
@@ -134,7 +136,6 @@ export function OutputPreviewPanel({
   const titleSuggestions = metadataGeneration?.title_suggestions ?? [];
   const hashtagSuggestions = metadataGeneration?.hashtag_suggestions ?? [];
   const summary = metadataGeneration?.summary ?? null;
-  const captionItems = metadataPayload?.captions?.items ?? [];
 
   const showAdjustCrop = isCompleted && processResult?.layout === "stacked";
   const showEditSubtitles = isAiMode && captionItems.length > 0;

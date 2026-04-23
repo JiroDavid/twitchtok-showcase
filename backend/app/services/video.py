@@ -52,8 +52,13 @@ def _build_cover_crop_filter(
     target_width: int,
     target_height: int,
 ) -> str:
+    x, y = crop_box["x"], crop_box["y"]
+    # Clamp w/h to actual video bounds at FFmpeg evaluation time so
+    # crops defined against 1920x1080 don't overflow smaller source videos.
+    safe_w = f"min({crop_box['w']}\\,in_w-{x})"
+    safe_h = f"min({crop_box['h']}\\,in_h-{y})"
     return (
-        f"crop={crop_box['w']}:{crop_box['h']}:{crop_box['x']}:{crop_box['y']},"
+        f"crop={safe_w}:{safe_h}:{x}:{y},"
         f"scale={target_width}:{target_height}:force_original_aspect_ratio=increase,"
         f"crop={target_width}:{target_height}"
     )

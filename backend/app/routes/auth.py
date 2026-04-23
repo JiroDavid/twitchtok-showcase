@@ -11,7 +11,7 @@ from app.services.twitch_auth import exchange_code_for_token
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 TWITCH_AUTH_URL = "https://id.twitch.tv/oauth2/authorize"
-FRONTEND_CALLBACK_URL = "http://localhost:3000"
+FRONTEND_CALLBACK_URL = settings.frontend_url
 
 
 @router.get("/twitch/login")
