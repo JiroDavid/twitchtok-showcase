@@ -45,27 +45,32 @@ STACKED_CROP_SCHEMA = {
     "required": ["facecam_region", "gameplay_region", "detection_notes"],
 }
 
-STACKED_CROP_PROMPT = f"""You are analysing a single frame from a 1920×1080 gaming stream clip.
+STACKED_CROP_PROMPT = f"""You are analysing a single frame from a 1920×1080 stream clip.
 
 The user wants to export this clip as a stacked vertical video (9:16, 1080×1920) with two regions:
-- TOP region: the streamer's facecam / webcam overlay
-- BOTTOM region: the main gameplay area
+- TOP region: the streamer's webcam / facecam (a live video feed showing a real human face)
+- BOTTOM region: the main content area (gameplay, screen share, IRL footage, etc.)
 
 Your job is to locate these two regions in the source frame.
 
+What a facecam looks like:
+- A rectangular window showing a real human face, usually the streamer
+- Typically overlaid in one of the four corners of the frame
+- Looks like a live webcam feed — NOT a minimap, chat box, game UI, health bar, or any other overlay
+- If you cannot see a real human face in a webcam-style window, there is NO facecam
+
 IMPORTANT — coordinate system:
 - The source frame is exactly {SOURCE_WIDTH} pixels wide and {SOURCE_HEIGHT} pixels tall.
-- All values (x, y, w, h) MUST be raw PIXEL counts, NOT percentages or normalised values.
-- Valid ranges: x in [0, {SOURCE_WIDTH}), y in [0, {SOURCE_HEIGHT}), w in [1, {SOURCE_WIDTH}], h in [1, {SOURCE_HEIGHT}].
-- A typical facecam overlay is 150–450 px wide and 120–380 px tall — look carefully at the actual frame.
-- The gameplay area is usually at least 800 px wide and 400 px tall.
-- Do NOT copy example values — every stream layout is different; measure what you actually see.
+- (x, y) is the TOP-LEFT corner of the region. (x + w, y + h) is the BOTTOM-RIGHT corner.
+- All values MUST be raw PIXEL counts — do NOT use percentages or normalised values.
+- Valid ranges: x in [0, {SOURCE_WIDTH-1}], y in [0, {SOURCE_HEIGHT-1}], w in [100, {SOURCE_WIDTH}], h in [80, {SOURCE_HEIGHT}].
+- Do NOT return zeros or tiny values. Every field must be a realistic pixel measurement.
 
 Instructions:
-- Identify the bounding box of the facecam/webcam overlay (usually a small inset in one of the four corners).
-- Identify the bounding box of the primary gameplay content (usually most of the frame).
-- If no distinct facecam is visible, use a fallback facecam centred at the top (x={SOURCE_WIDTH//2 - 300} y=0 w=600 h=300) and full frame as gameplay.
-- detection_notes must state which corner the facecam is in and confirm all values are in pixels.
+- Look for a real human face in a webcam window. If found, measure its bounding box tightly.
+- If NO human face / webcam is visible, use the fallback: x={SOURCE_WIDTH//2 - 300} y=0 w=600 h=300 for facecam.
+- For the content region, measure the primary content area. If it fills the whole frame use x=0 y=0 w={SOURCE_WIDTH} h={SOURCE_HEIGHT}.
+- detection_notes must say which corner the facecam is in and whether it shows a real face, or state "no facecam detected".
 
 Return valid JSON only — no markdown, no explanation:
 {{
@@ -201,8 +206,25 @@ def analyze_video_layout(
     top_crop_hint = _parse_crop_hint(parsed.get("facecam_region"))
     bottom_crop_hint = _parse_crop_hint(parsed.get("gameplay_region"))
 
-    if top_crop_hint and bottom_crop_hint:
-        bottom_crop_hint = _exclude_facecam_from_gameplay(bottom_crop_hint, top_crop_hint)
+    if not top_crop_hint:
+        top_crop_hint = {
+            "x": SOURCE_WIDTH // 2 - 300,
+            "y": 0,
+            "w": 600,
+            "h": 300,
+        }
+        detection_notes = (detection_notes + " (facecam fallback applied)").strip()
+
+    if not bottom_crop_hint:
+        bottom_crop_hint = {
+            "x": 0,
+            "y": 0,
+            "w": SOURCE_WIDTH,
+            "h": SOURCE_HEIGHT,
+        }
+        detection_notes = (detection_notes + " (gameplay fallback applied)").strip()
+
+    bottom_crop_hint = _exclude_facecam_from_gameplay(bottom_crop_hint, top_crop_hint)
 
     return {
         "applied": True,

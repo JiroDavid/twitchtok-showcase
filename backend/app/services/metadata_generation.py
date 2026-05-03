@@ -102,9 +102,9 @@ Your task is to produce:
 Rules:
 - Stay grounded primarily in the provided transcript text
 - Use vision notes only as light supporting context
-- Do not invent specific game details, names, or events unless clearly supported
+- Do not invent specific details, names, or events unless clearly supported by the transcript
 - Titles should be punchy, attention-grabbing, and suitable for TikTok — use natural hype language, rhetorical questions, or reaction phrasing (e.g. "this clip is INSANE", "wait for it...", "no way this happened")
-- Hashtags must follow TikTok convention: always include discovery tags (fyp, foryou, foryoupage) and platform tags (twitch, twitchclips, twitchstreams, gaming), then add 4-5 clip-specific tags based on what happened. All lowercase, no spaces, no # symbol in the returned strings.
+- Hashtags must follow TikTok convention: always include discovery tags (fyp, foryou, foryoupage), then add platform/content tags based on what the clip is actually about — only include gaming/twitch tags if the clip is clearly gaming or stream content. Add 6-7 clip-specific tags based on what happened. All lowercase, no spaces, no # symbol in the returned strings.
 - Summary should be 1 to 2 sentences max, written as a plain description of what happened
 - If the context is weak, stay generic rather than hallucinating
 

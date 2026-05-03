@@ -621,6 +621,7 @@ def process_layout_analysis_job(
         representative_frame = extract_representative_frame(
             input_path=input_path,
             output_filename=frame_filename,
+            scale_width=None,
         )
 
         analysis_result = analyze_video_layout(

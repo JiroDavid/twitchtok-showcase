@@ -5,16 +5,27 @@ from pathlib import Path
 from app.services.video import OUTPUTS_DIR
 
 
-DEFAULT_WHISPER_MODEL = "small"
+DEFAULT_WHISPER_MODEL = "medium"
 DEFAULT_MAX_WORDS_PER_CHUNK = 3
 DEFAULT_SOFT_MAX_CHARS_PER_CHUNK = 14
+CHUNK_GAP_BREAK_SECONDS = 0.5
+MIN_CHUNK_DISPLAY_SECONDS = 0.1
+
+# Words that reliably signal a new utterance or speaker response in stream speech.
+# Deliberately narrow — broad capitalization checks break on proper nouns/segment starts.
+UTTERANCE_BREAK_WORDS = frozenset({
+    "oh", "ah", "aw", "aww", "hmm", "hm", "ugh",
+    "no", "nah", "yes", "yeah", "yep", "yup",
+    "wow", "wait", "well", "what", "okay", "ok",
+    "alright", "right", "sure", "also", "but",
+})
 DEFAULT_TIME_PRECISION = 2
 ASS_PLAYRES_X = 1080
 ASS_PLAYRES_Y = 1920
 
 DEFAULT_CAPTION_COLOR = "#FFFFFF"
 DEFAULT_CAPTION_FONT_FAMILY = "Arial"
-DEFAULT_CAPTION_FONT_SIZE = 140
+DEFAULT_CAPTION_FONT_SIZE = 155
 DEFAULT_CAPTION_OUTLINE = 8
 DEFAULT_CAPTION_SHADOW = 3
 
@@ -86,6 +97,14 @@ def _segments_to_srt(segments: list[dict]) -> str:
         end = float(segment.get("end", start))
         if end < start:
             end = start
+
+        timed_words = [
+            w for w in (segment.get("words") or [])
+            if w.get("start") is not None and w.get("end") is not None
+        ]
+        if timed_words:
+            start = float(timed_words[0]["start"])
+            end = float(timed_words[-1]["end"])
 
         lines.extend(
             [
@@ -210,7 +229,21 @@ def _chunk_words(
             exceeds_word_limit = len(proposed_words) > max_words_per_chunk
             exceeds_char_limit = len(proposed_text) > soft_max_chars_per_chunk
 
-            if exceeds_word_limit or exceeds_char_limit:
+            # Only flush on a timing gap when the current chunk already has enough
+            # visible duration. Whisper sometimes assigns zero-duration timestamps to
+            # words at the start of clips — isolating them creates invisible subtitles.
+            gap = word["start"] - current_words[-1]["end"]
+            chunk_duration = current_words[-1]["end"] - current_words[0]["start"]
+            has_timing_gap = (
+                gap >= CHUNK_GAP_BREAK_SECONDS
+                and chunk_duration >= MIN_CHUNK_DISPLAY_SECONDS
+            )
+
+            # Break before known stream interjections/responses. Deliberately narrow
+            # to avoid breaking on proper nouns or Whisper segment-boundary capitals.
+            is_new_utterance = word["word"].lower() in UTTERANCE_BREAK_WORDS
+
+            if exceeds_word_limit or exceeds_char_limit or has_timing_gap or is_new_utterance:
                 flush_current_chunk()
 
         current_words.append(word)
@@ -375,6 +408,12 @@ def _segments_to_caption_items(segments: list[dict]) -> list[dict]:
                     "end": _round_time(word_end_f),
                 }
             )
+
+        # Prefer word-level timing — segment start/end often begins at 0 even when
+        # speech starts later (Whisper spans silence into the segment boundary).
+        if segment_words:
+            start = segment_words[0]["start"]
+            end = segment_words[-1]["end"]
 
         items.append(
             {
@@ -610,7 +649,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,{default_style["font_family"]},{default_style["font_size"]},&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,{default_style["outline"]},{default_style["shadow"]},2,60,60,60,1
+Style: Default,{default_style["font_family"]},{default_style["font_size"]},&H00FFFFFF,&H000000FF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,{default_style["outline"]},{default_style["shadow"]},2,60,60,60,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -653,10 +692,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             "{"
             rf"\fn{font_name}"
             rf"\fs{adjusted_font_size}"
+            rf"\b1"
             rf"\c{color}"
             rf"\bord{outline}"
             rf"\shad{shadow}"
             rf"\an{alignment}"
+            rf"\fscx115\fscy115\t(0,200,2,\fscx100\fscy100)"
             f"{pos_override}"
             "}"
         )
@@ -815,7 +856,16 @@ def transcribe_video_to_srt(
             "Whisper is not installed. Install backend dependencies to enable captions."
         ) from exc
 
-    model = whisper.load_model(model_name)
+    import torch
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        try:
+            model = whisper.load_model(model_name, device="cuda")
+        except torch.cuda.OutOfMemoryError:
+            torch.cuda.empty_cache()
+            model = whisper.load_model(model_name, device="cpu")
+    else:
+        model = whisper.load_model(model_name, device="cpu")
     transcription = model.transcribe(
         str(input_file),
         language="en",

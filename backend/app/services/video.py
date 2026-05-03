@@ -67,6 +67,7 @@ def _build_cover_crop_filter(
 def extract_representative_frame(
     input_path: str,
     output_filename: str,
+    scale_width: int | None = 720,
 ) -> dict:
     input_file = Path(input_path)
 
@@ -75,13 +76,15 @@ def extract_representative_frame(
 
     output_path = OUTPUTS_DIR / output_filename
 
+    vf = "thumbnail" if scale_width is None else f"thumbnail,scale={scale_width}:-1"
+
     command = [
         "ffmpeg",
         "-y",
         "-i",
         str(input_file),
         "-vf",
-        "thumbnail,scale=720:-1",
+        vf,
         "-frames:v",
         "1",
         str(output_path),

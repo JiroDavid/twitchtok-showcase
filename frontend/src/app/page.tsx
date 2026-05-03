@@ -289,7 +289,7 @@ export default function Home() {
   }, [subtitleRerenderResult, processResult]);
 
   const outputVideoUrl = useMemo(() => {
-    if (pipelineStage === "subtitle_rerender") {
+    if (pipelineStage === "subtitle_rerender" || cropRerenderJobId !== null) {
       return null;
     }
 
@@ -299,7 +299,7 @@ export default function Home() {
     return `${API_BASE_URL}${outputUrl}?t=${encodeURIComponent(
       activeOutputResult?.filename ?? Date.now().toString()
     )}`;
-  }, [activeOutputResult, pipelineStage]);
+  }, [activeOutputResult, cropRerenderJobId, pipelineStage]);
 
   const metadataPayload = useMemo(() => {
     return processResult?.metadata?.payload;
