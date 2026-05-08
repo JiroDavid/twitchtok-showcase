@@ -1576,6 +1576,8 @@ export default function Home() {
                 result: {
                   ...currentResult,
                   output_url: result.output_url,
+                  output_path: result.output_path ?? currentResult?.output_path,
+                  base_output_path: result.base_output_path ?? result.output_path ?? currentResult?.base_output_path,
                   filename: result.filename ?? currentResult?.filename,
                   stacked_config_used:
                     result.stacked_config_used ?? currentResult?.stacked_config_used,

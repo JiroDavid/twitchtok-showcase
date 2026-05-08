@@ -549,6 +549,7 @@ def process_crop_rerender_job(
         if captions_ass_path:
             ass_file = Path(captions_ass_path)
             if ass_file.exists():
+                result["base_output_path"] = result["output_path"]
                 burned_filename = f"{input_file.stem}_cropadjust_{short_job_id}_subtitled.mp4"
                 burned = burn_subtitles_into_video(
                     input_video_path=result["output_path"],

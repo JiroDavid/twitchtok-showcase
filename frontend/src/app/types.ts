@@ -239,6 +239,7 @@ export type ProcessJobResult = {
 
 export type CropRerenderJobResult = {
   output_path?: string;
+  base_output_path?: string;
   filename?: string;
   layout?: string;
   output_url?: string;
