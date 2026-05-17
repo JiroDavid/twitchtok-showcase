@@ -72,6 +72,7 @@ function stageColor(stage: PipelineStage) {
 
 type OutputPreviewPanelProps = {
   captionItems: MetadataJsonCaptionsEntry[];
+  hasManualSubtitles: boolean;
   onAddSubtitles: () => void;
   onOpenCropAdjust: () => void;
   onOpenSubtitleEditor: () => void;
@@ -112,6 +113,7 @@ function formatSeconds(value: number | undefined) {
 
 export function OutputPreviewPanel({
   captionItems,
+  hasManualSubtitles,
   onAddSubtitles,
   onOpenCropAdjust,
   onOpenSubtitleEditor,
@@ -138,8 +140,8 @@ export function OutputPreviewPanel({
   const summary = metadataGeneration?.summary ?? null;
 
   const showAdjustCrop = isCompleted && processResult?.layout === "stacked";
-  const showEditSubtitles = isAiMode && captionItems.length > 0;
-  const showAddSubtitles = !isAiMode && isCompleted;
+  const showEditSubtitles = (isAiMode && captionItems.length > 0) || (!isAiMode && isCompleted && hasManualSubtitles);
+  const showAddSubtitles = !isAiMode && isCompleted && !hasManualSubtitles;
 
   function getLayoutLabel(value: string | undefined) {
     if (!value) return "N/A";

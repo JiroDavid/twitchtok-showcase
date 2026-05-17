@@ -1,6 +1,17 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { EditableCaptionDraft } from "../types";
+import { SubtitleTimeline } from "./SubtitleTimeline";
+
+const SNAP_OPTIONS = [
+  { label: "0.05s", value: 0.05 },
+  { label: "0.1s", value: 0.1 },
+  { label: "0.25s", value: 0.25 },
+  { label: "0.5s", value: 0.5 },
+  { label: "1s", value: 1.0 },
+  { label: "Off", value: 0 },
+];
 
 type SubtitleEditorModalProps = {
   captions: EditableCaptionDraft[];
@@ -13,6 +24,7 @@ type SubtitleEditorModalProps = {
     field: "start" | "end" | "final_text",
     value: number | string
   ) => void;
+  onChangeTiming: (index: number, start: number, end: number) => void;
   onChangePlacement: (
     index: number,
     field: "track" | "x" | "y" | "align",
@@ -43,6 +55,7 @@ export function SubtitleEditorModal({
   onApply,
   onChangeCaption,
   onChangePlacement,
+  onChangeTiming,
   onChangeStyle,
   onClose,
   onDeleteCaption,
@@ -50,11 +63,44 @@ export function SubtitleEditorModal({
   onSave,
   outputVideoUrl,
 }: SubtitleEditorModalProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [selectedCaptionId, setSelectedCaptionId] = useState<number | null>(null);
+  const [snapInterval, setSnapInterval] = useState(0.1);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentTime(0);
+      setVideoDuration(0);
+      setSelectedCaptionId(null);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (selectedCaptionId === null) return;
+    document
+      .getElementById(`caption-card-${selectedCaptionId}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [selectedCaptionId]);
+
   if (!isOpen) return null;
+
+  function handleSeek(t: number) {
+    if (videoRef.current) videoRef.current.currentTime = t;
+    setCurrentTime(t);
+  }
+
+  function handleTimelineChange(id: number, start: number, end: number) {
+    const index = captions.findIndex((c) => c.id === id);
+    if (index === -1) return;
+    onChangeTiming(index, start, end);
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm">
       <div className="flex h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+        {/* Header */}
         <div className="flex items-start justify-between border-b border-zinc-800 px-6 py-5">
           <div>
             <h2 className="text-xl font-semibold text-zinc-100">
@@ -64,7 +110,6 @@ export function SubtitleEditorModal({
               Edit captions, add missing lines, and control manual subtitle styling for rerenders.
             </p>
           </div>
-
           <button
             type="button"
             onClick={onClose}
@@ -74,7 +119,9 @@ export function SubtitleEditorModal({
           </button>
         </div>
 
+        {/* Content */}
         <div className="grid min-h-0 flex-1 gap-0 xl:grid-cols-[420px_minmax(0,1fr)]">
+          {/* Left: video + add button */}
           <div className="border-b border-zinc-800 p-5 xl:border-b-0 xl:border-r">
             <h3 className="text-sm font-semibold text-zinc-200">Preview</h3>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
@@ -84,10 +131,19 @@ export function SubtitleEditorModal({
             <div className="mt-4 flex min-h-[420px] items-center justify-center rounded-3xl border border-zinc-800 bg-zinc-900 p-4">
               {outputVideoUrl ? (
                 <video
+                  ref={videoRef}
                   key={outputVideoUrl}
                   controls
                   className="max-h-[620px] rounded-2xl border border-zinc-800"
                   src={outputVideoUrl}
+                  onTimeUpdate={() => {
+                    if (videoRef.current)
+                      setCurrentTime(videoRef.current.currentTime);
+                  }}
+                  onLoadedMetadata={() => {
+                    if (videoRef.current)
+                      setVideoDuration(videoRef.current.duration);
+                  }}
                 />
               ) : (
                 <div className="text-sm text-zinc-500">
@@ -106,6 +162,7 @@ export function SubtitleEditorModal({
             </button>
           </div>
 
+          {/* Right: caption list */}
           <div className="min-h-0 overflow-y-auto p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -116,7 +173,6 @@ export function SubtitleEditorModal({
                   Manual captions can overlap in time. This step focuses on readability and visual control.
                 </p>
               </div>
-
               <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-400">
                 {captions.length} segments
               </div>
@@ -126,7 +182,13 @@ export function SubtitleEditorModal({
               {captions.map((caption, index) => (
                 <div
                   key={`${caption.id}-${index}`}
-                  className="rounded-3xl border border-zinc-800 bg-zinc-900 p-4"
+                  id={`caption-card-${caption.id}`}
+                  className={`rounded-3xl border bg-zinc-900 p-4 transition cursor-pointer ${
+                    caption.id === selectedCaptionId
+                      ? "border-violet-500/60 ring-1 ring-violet-500/30"
+                      : "border-zinc-800 hover:border-zinc-700"
+                  }`}
+                  onClick={() => setSelectedCaptionId(caption.id)}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
@@ -146,7 +208,10 @@ export function SubtitleEditorModal({
 
                     <button
                       type="button"
-                      onClick={() => onDeleteCaption(caption.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteCaption(caption.id);
+                      }}
                       disabled={isApplying}
                       className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-200 transition hover:border-red-400 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -155,7 +220,7 @@ export function SubtitleEditorModal({
                   </div>
 
                   <div className="mt-4 grid gap-4 lg:grid-cols-[120px_120px_minmax(0,1fr)]">
-                    <label className="block">
+                    <label className="block" onClick={(e) => e.stopPropagation()}>
                       <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">
                         Start
                       </span>
@@ -170,7 +235,7 @@ export function SubtitleEditorModal({
                       />
                     </label>
 
-                    <label className="block">
+                    <label className="block" onClick={(e) => e.stopPropagation()}>
                       <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">
                         End
                       </span>
@@ -185,7 +250,7 @@ export function SubtitleEditorModal({
                       />
                     </label>
 
-                    <label className="block">
+                    <label className="block" onClick={(e) => e.stopPropagation()}>
                       <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">
                         Final Text
                       </span>
@@ -200,7 +265,7 @@ export function SubtitleEditorModal({
                     </label>
                   </div>
 
-                  <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4" onClick={(e) => e.stopPropagation()}>
                     <label className="block">
                       <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">
                         Track
@@ -266,7 +331,7 @@ export function SubtitleEditorModal({
                     </label>
                   </div>
 
-                  <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4" onClick={(e) => e.stopPropagation()}>
                     <label className="block">
                       <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">
                         Outline
@@ -337,7 +402,7 @@ export function SubtitleEditorModal({
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
+                  <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-3" onClick={(e) => e.stopPropagation()}>
                     <p className="text-[11px] uppercase tracking-wide text-zinc-500">
                       Original Draft Reference
                     </p>
@@ -351,6 +416,42 @@ export function SubtitleEditorModal({
           </div>
         </div>
 
+        {/* Timeline */}
+        <div className="flex-shrink-0 border-t border-zinc-800">
+          <div className="flex items-center justify-between bg-zinc-900/40 px-4 py-2">
+            <span className="text-xs font-medium text-zinc-400">Timeline</span>
+            <div className="flex items-center gap-1">
+              <span className="mr-1 text-xs text-zinc-600">Snap:</span>
+              {SNAP_OPTIONS.map(({ label, value }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setSnapInterval(value)}
+                  className={`rounded px-2 py-0.5 text-xs transition ${
+                    snapInterval === value
+                      ? "border border-violet-500/50 bg-violet-500/20 text-violet-200"
+                      : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <SubtitleTimeline
+            captions={captions}
+            currentTime={currentTime}
+            disabled={isApplying}
+            duration={videoDuration}
+            selectedId={selectedCaptionId}
+            snapInterval={snapInterval}
+            onChange={handleTimelineChange}
+            onSeek={handleSeek}
+            onSelect={setSelectedCaptionId}
+          />
+        </div>
+
+        {/* Footer */}
         <div className="flex flex-col gap-3 border-t border-zinc-800 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-zinc-500">
             Save keeps your current draft. Apply renders a new subtitle version from the edited caption objects.

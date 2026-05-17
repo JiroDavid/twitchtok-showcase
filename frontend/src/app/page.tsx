@@ -162,10 +162,15 @@ function createNewCaptionDraft(
       ? Math.max(...existingDrafts.map((item) => item.id)) + 1
       : 1;
 
+  const latestEnd =
+    existingDrafts.length > 0
+      ? Math.max(...existingDrafts.map((d) => d.end))
+      : 0;
+
   return {
     id: nextId,
-    start: 0,
-    end: 2,
+    start: latestEnd,
+    end: latestEnd + 2,
     raw_text: "",
     refined_text: "",
     final_text: "",
@@ -968,6 +973,12 @@ export default function Home() {
 
   function removeSubtitleDraft(id: number) {
     setSubtitleDrafts((current) => current.filter((caption) => caption.id !== id));
+  }
+
+  function updateSubtitleTiming(index: number, start: number, end: number) {
+    setSubtitleDrafts((current) =>
+      current.map((caption, i) => (i === index ? { ...caption, start, end } : caption))
+    );
   }
 
   function updateSubtitleStyle(
@@ -1781,6 +1792,7 @@ export default function Home() {
         <div className="mt-6">
           <OutputPreviewPanel
             captionItems={generatedCaptionItems}
+            hasManualSubtitles={savedSubtitleDrafts.length > 0 || generatedCaptionItems.length > 0}
             onAddSubtitles={openAddSubtitles}
             onOpenCropAdjust={openCropAdjust}
             onOpenSubtitleEditor={openSubtitleEditor}
@@ -1877,6 +1889,7 @@ export default function Home() {
         onAddCaption={addSubtitleDraft}
         onApply={applySubtitleEdits}
         onChangeCaption={updateSubtitleDraft}
+        onChangeTiming={updateSubtitleTiming}
         onChangePlacement={updateSubtitlePlacement}
         onChangeStyle={updateSubtitleStyle}
         onClose={closeSubtitleEditor}
