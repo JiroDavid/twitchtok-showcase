@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["127.0.0.1", "condiment-schnapps-paramedic.ngrok-free.dev"],
+  allowedDevOrigins: ["127.0.0.1"],
+  // allowedDevOrigins: ["127.0.0.1", "condiment-schnapps-paramedic.ngrok-free.dev"],
   async rewrites() {
     return [
       {

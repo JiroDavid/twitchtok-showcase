@@ -232,21 +232,28 @@ Processed files are saved to `backend/storage/outputs/`:
 
 ## ngrok Support (optional)
 
-Twitch OAuth requires a publicly accessible redirect URL. If you're developing locally and need a real redirect URI, use [ngrok](https://ngrok.com):
+Everything runs locally by default. ngrok is only needed if Twitch OAuth refuses `localhost` as a redirect URI (some Twitch app configs require a public URL). The ngrok config is already present in the codebase but commented out.
 
-```bash
-# Expose the backend
-ngrok http 8000
-```
+To enable it:
 
-Then update your `backend/.env`:
+1. Install ngrok and expose the backend:
+   ```bash
+   ngrok http 8000
+   ```
 
-```env
-TWITCH_REDIRECT_URI=https://your-ngrok-subdomain.ngrok-free.app/auth/twitch/callback
-FRONTEND_URL=https://your-ngrok-subdomain.ngrok-free.app
-```
+2. Uncomment and update the ngrok lines in `backend/.env`:
+   ```env
+   TWITCH_REDIRECT_URI=https://your-subdomain.ngrok-free.app/auth/twitch/callback
+   FRONTEND_URL=https://your-subdomain.ngrok-free.app
+   ```
 
-And update the redirect URL in your Twitch Developer Console to match.
+3. Uncomment the ngrok origin in `backend/app/main.py` (CORS allow list).
+
+4. Uncomment the ngrok entry in `frontend/next.config.ts` (`allowedDevOrigins`).
+
+5. Update the redirect URL in your Twitch Developer Console to match the ngrok URL.
+
+To go back to local-only, re-comment those lines and set the Twitch console redirect back to `http://localhost:8000/auth/twitch/callback`.
 
 ---
 
