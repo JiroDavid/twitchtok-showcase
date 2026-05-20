@@ -228,7 +228,6 @@ export function SubtitleTimeline({
       ref={containerRef}
       className={`relative w-full select-none overflow-hidden bg-zinc-950 ${disabled ? "pointer-events-none opacity-50" : ""}`}
     >
-      {/* Ruler */}
       <div
         className="relative h-6 border-b border-zinc-800 bg-zinc-900/60 cursor-crosshair"
         onPointerDown={(e) => startSeekDrag(e.clientX)}
@@ -245,7 +244,6 @@ export function SubtitleTimeline({
             </span>
           </div>
         ))}
-        {/* Playhead triangle + line */}
         <div
           className="absolute top-0 z-20 pointer-events-none"
           style={{ left: playheadPos, transform: "translateX(-50%)" }}
@@ -258,7 +256,6 @@ export function SubtitleTimeline({
         />
       </div>
 
-      {/* Top / Free track */}
       <div
         className="relative border-b border-zinc-800/60 cursor-crosshair"
         style={{ height: 48 }}
@@ -274,7 +271,6 @@ export function SubtitleTimeline({
         />
       </div>
 
-      {/* Bottom track */}
       <div
         className="relative cursor-crosshair"
         style={{ height: 48 }}

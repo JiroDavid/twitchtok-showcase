@@ -100,7 +100,6 @@ export function SubtitleEditorModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm">
       <div className="flex h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
-        {/* Header */}
         <div className="flex items-start justify-between border-b border-zinc-800 px-6 py-5">
           <div>
             <h2 className="text-xl font-semibold text-zinc-100">
@@ -119,9 +118,7 @@ export function SubtitleEditorModal({
           </button>
         </div>
 
-        {/* Content */}
         <div className="grid min-h-0 flex-1 gap-0 xl:grid-cols-[420px_minmax(0,1fr)]">
-          {/* Left: video + add button */}
           <div className="border-b border-zinc-800 p-5 xl:border-b-0 xl:border-r">
             <h3 className="text-sm font-semibold text-zinc-200">Preview</h3>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
@@ -162,7 +159,6 @@ export function SubtitleEditorModal({
             </button>
           </div>
 
-          {/* Right: caption list */}
           <div className="min-h-0 overflow-y-auto p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -416,7 +412,6 @@ export function SubtitleEditorModal({
           </div>
         </div>
 
-        {/* Timeline */}
         <div className="flex-shrink-0 border-t border-zinc-800">
           <div className="flex items-center justify-between bg-zinc-900/40 px-4 py-2">
             <span className="text-xs font-medium text-zinc-400">Timeline</span>
@@ -451,7 +446,6 @@ export function SubtitleEditorModal({
           />
         </div>
 
-        {/* Footer */}
         <div className="flex flex-col gap-3 border-t border-zinc-800 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-zinc-500">
             Save keeps your current draft. Apply renders a new subtitle version from the edited caption objects.

@@ -157,7 +157,6 @@ export function OutputPreviewPanel({
       ref={sectionRef}
       className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6"
     >
-      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold">Output Preview</h2>
@@ -197,7 +196,6 @@ export function OutputPreviewPanel({
         </div>
       </div>
 
-      {/* Pipeline status */}
       <div className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
@@ -230,10 +228,8 @@ export function OutputPreviewPanel({
         </div>
       </div>
 
-      {/* Three-column main area */}
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_auto_1fr]">
 
-        {/* Left: AI Content Suggestions */}
         <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -256,7 +252,6 @@ export function OutputPreviewPanel({
           </div>
 
           <div className="mt-5 space-y-6">
-            {/* Title ideas — first */}
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
                 Title ideas
@@ -286,7 +281,6 @@ export function OutputPreviewPanel({
               )}
             </div>
 
-            {/* Hashtags — second */}
             <div>
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
@@ -307,7 +301,6 @@ export function OutputPreviewPanel({
               )}
             </div>
 
-            {/* Video Description — third */}
             {summary && (
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
@@ -321,7 +314,6 @@ export function OutputPreviewPanel({
           </div>
         </div>
 
-        {/* Center: Video + metadata stats */}
         <div className="flex flex-col items-center gap-5">
           <div className="flex min-h-[680px] w-full items-center justify-center rounded-3xl border border-dashed border-zinc-700 bg-zinc-950 p-4">
             {outputVideoUrl ? (
@@ -383,7 +375,6 @@ export function OutputPreviewPanel({
           )}
         </div>
 
-        {/* Right: Captions */}
         <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-5">
           <h3 className="text-lg font-bold text-zinc-100">Captions</h3>
           <p className="mt-0.5 text-xs text-zinc-500">

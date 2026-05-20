@@ -9,7 +9,6 @@ from app.services.vision_analysis import DEFAULT_OLLAMA_URL, DEFAULT_VISION_MODE
 SOURCE_WIDTH = 1920
 SOURCE_HEIGHT = 1080
 
-# Regions smaller than this in either dimension are rejected as implausible.
 MIN_REGION_WIDTH = 50
 MIN_REGION_HEIGHT = 50
 
@@ -86,8 +85,6 @@ def _encode_image_to_base64(image_path: Path) -> str:
 
 
 def _looks_like_percentages(box: dict) -> bool:
-    """Return True if all four values are in 0-100 range, suggesting the model
-    returned percentages instead of pixel coordinates."""
     return all(0 <= box[k] <= PERCENTAGE_DETECTION_THRESHOLD for k in ("x", "y", "w", "h"))
 
 
@@ -109,20 +106,13 @@ def _clamp_to_frame(box: dict) -> dict:
 
 
 def _exclude_facecam_from_gameplay(gameplay: dict, facecam: dict) -> dict:
-    """Shift the gameplay crop horizontally to avoid the facecam corner.
-
-    Only adjusts x/w — trimming height would chop off too much gameplay content.
-    Falls back to the original box if the result would be narrower than 600px.
-    """
     facecam_center_x = facecam["x"] + facecam["w"] / 2
     gx, gy, gw, gh = gameplay["x"], gameplay["y"], gameplay["w"], gameplay["h"]
 
     if facecam_center_x < SOURCE_WIDTH / 2:
-        # Facecam on the left — shift gameplay start right past facecam edge
         new_x = facecam["x"] + facecam["w"]
         new_w = gw - (new_x - gx)
     else:
-        # Facecam on the right — cap gameplay width at facecam left edge
         new_x = gx
         new_w = facecam["x"] - gx
 

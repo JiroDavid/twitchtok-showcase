@@ -13,6 +13,7 @@ type EditorControlsPanelProps = {
   clipUrl: string;
   currentHighlightConfig: HighlightConfig;
   hideModeBadge: boolean;
+  hideToggle: boolean;
   isSubmitting: boolean;
   layout: HighlightConfig["layout"];
   selectedDownloadedPath: string;
@@ -35,6 +36,7 @@ export function EditorControlsPanel({
   clipUrl,
   currentHighlightConfig,
   hideModeBadge,
+  hideToggle,
   isSubmitting,
   layout,
   selectedDownloadedPath,
@@ -62,7 +64,7 @@ export function EditorControlsPanel({
       <div>
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-xl font-semibold">Editor Controls</h2>
-          {!hideModeBadge && uiModeLocked && (
+          {!hideModeBadge && (uiModeLocked || hideToggle) && (
             <span
               className={`rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest ${
                 uiMode === "ai"
@@ -79,7 +81,7 @@ export function EditorControlsPanel({
             ? "AI transcribes, refines captions, and auto-detects stacked crop regions."
             : "FFmpeg-only processing. Crops and subtitles are set manually."}
         </p>
-        {!uiModeLocked && !hideModeBadge && (
+        {!uiModeLocked && !hideModeBadge && !hideToggle && (
           <div className="mt-4 flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
             <span className="text-xs font-medium text-zinc-500">
               Research Mode:

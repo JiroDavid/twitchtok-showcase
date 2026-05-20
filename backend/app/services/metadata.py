@@ -36,12 +36,6 @@ def build_clip_metadata_payload(
     captions_result: dict | None = None,
     config: dict | None = None,
 ) -> dict:
-    """
-    Build a future-ready metadata scaffold for a processed clip.
-
-    This creates a stable structured payload that future vision and LLM
-    steps can enrich without changing the rest of the pipeline contract.
-    """
     input_file = Path(input_path)
     captions_json_path = (
         captions_result.get("captions_json_path") if captions_result else None

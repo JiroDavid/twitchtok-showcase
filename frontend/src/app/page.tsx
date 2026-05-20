@@ -253,6 +253,7 @@ export default function Home() {
 
   const [uiMode, setUiMode] = useState<UiMode>("non_ai");
   const [hideModeBadge, setHideModeBadge] = useState(false);
+  const [hideToggle, setHideToggle] = useState(false);
   const [uiModeLocked, setUiModeLocked] = useState(false);
 
   const [layoutAnalysisJobId, setLayoutAnalysisJobId] = useState<string | null>(null);
@@ -441,6 +442,10 @@ export default function Home() {
 
     if (params.get("hide_mode") === "true") {
       setHideModeBadge(true);
+    }
+
+    if (params.get("hide_toggle") === "true") {
+      setHideToggle(true);
     }
 
     const oauth = params.get("oauth");
@@ -1729,6 +1734,7 @@ export default function Home() {
               clipUrl={clipUrl}
               currentHighlightConfig={highlightConfig}
               hideModeBadge={hideModeBadge}
+              hideToggle={hideToggle}
               isSubmitting={isSubmitting}
               layout={layout}
               selectedDownloadedPath={selectedDownloadedPath}
