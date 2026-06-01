@@ -21,7 +21,13 @@ export function ClipPicker({ selectedClipIndex, onSelect }: ClipPickerProps) {
   function handleMouseEnter(index: number) {
     setHoveredIndex(index);
     const video = videoRefs.current[index];
-    if (video) video.muted = false;
+    if (video) {
+      try {
+        video.muted = false;
+      } catch {
+        // Browser autoplay policy may block unmuting without a user gesture
+      }
+    }
   }
 
   function handleMouseLeave(index: number) {
@@ -40,9 +46,10 @@ export function ClipPicker({ selectedClipIndex, onSelect }: ClipPickerProps) {
           const isActive = hoveredIndex === index || isSelected;
 
           return (
-            <div
+            <button
               key={index}
-              className={`relative w-48 cursor-pointer overflow-hidden rounded-xl border-2 transition-all duration-150 ease-out
+              type="button"
+              className={`relative w-48 overflow-hidden rounded-xl border-2 transition-all duration-150 ease-out text-left
                 ${isActive
                   ? "scale-105 -translate-y-1 border-[#9146FF] shadow-[0_0_24px_rgba(145,70,255,0.35)]"
                   : "border-zinc-700 hover:border-zinc-500"
@@ -98,7 +105,7 @@ export function ClipPicker({ selectedClipIndex, onSelect }: ClipPickerProps) {
                   {isSelected ? "Selected ✓" : isActive ? "▶ Playing with audio" : "▶ Auto-playing"}
                 </p>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
