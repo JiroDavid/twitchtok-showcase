@@ -68,6 +68,9 @@ export function SubtitleEditorModal({
   const [videoDuration, setVideoDuration] = useState(0);
   const [selectedCaptionId, setSelectedCaptionId] = useState<number | null>(null);
   const [snapInterval, setSnapInterval] = useState(0.1);
+  const [audioPeaks, setAudioPeaks] = useState<number[]>([]);
+  const [timelineHeight, setTimelineHeight] = useState(128);
+  const resizeDragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -83,6 +86,39 @@ export function SubtitleEditorModal({
       .getElementById(`caption-card-${selectedCaptionId}`)
       ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [selectedCaptionId]);
+
+  useEffect(() => {
+    if (!outputVideoUrl) return;
+    let cancelled = false;
+
+    async function extractPeaks() {
+      try {
+        const audioCtx = new AudioContext();
+        const response = await fetch(outputVideoUrl!);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        if (cancelled) return;
+        const data = audioBuffer.getChannelData(0);
+        const NUM_BARS = 200;
+        const blockSize = Math.floor(data.length / NUM_BARS);
+        const peaks: number[] = [];
+        for (let i = 0; i < NUM_BARS; i++) {
+          let max = 0;
+          for (let j = 0; j < blockSize; j++) {
+            const abs = Math.abs(data[i * blockSize + j] ?? 0);
+            if (abs > max) max = abs;
+          }
+          peaks.push(max);
+        }
+        setAudioPeaks(peaks);
+      } catch {
+        setAudioPeaks([]);
+      }
+    }
+
+    void extractPeaks();
+    return () => { cancelled = true; };
+  }, [outputVideoUrl]);
 
   if (!isOpen) return null;
 
@@ -440,6 +476,21 @@ export function SubtitleEditorModal({
         </div>
 
         <div className="flex-shrink-0 border-t border-zinc-800">
+          <div
+            className="flex cursor-ns-resize items-center justify-center border-b border-zinc-800 bg-zinc-900/60 py-0.5 select-none"
+            onPointerDown={(e) => {
+              resizeDragRef.current = { startY: e.clientY, startHeight: timelineHeight };
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              if (!resizeDragRef.current) return;
+              const delta = resizeDragRef.current.startY - e.clientY;
+              setTimelineHeight(Math.max(80, Math.min(320, resizeDragRef.current.startHeight + delta)));
+            }}
+            onPointerUp={() => { resizeDragRef.current = null; }}
+          >
+            <div className="h-1 w-8 rounded-full bg-zinc-700" />
+          </div>
           <div className="flex items-center justify-between bg-zinc-900/40 px-4 py-2">
             <span className="text-xs font-medium text-zinc-400">Timeline</span>
             <div className="flex items-center gap-1">
@@ -461,10 +512,12 @@ export function SubtitleEditorModal({
             </div>
           </div>
           <SubtitleTimeline
+            audioPeaks={audioPeaks}
             captions={captions}
             currentTime={currentTime}
             disabled={isApplying}
             duration={videoDuration}
+            height={timelineHeight}
             selectedId={selectedCaptionId}
             snapInterval={snapInterval}
             onChange={handleTimelineChange}
