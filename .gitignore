@@ -30,5 +30,5 @@ backend/storage/outputs/*
 !backend/storage/temp/.gitkeep
 !backend/storage/outputs/.gitkeep
 
-# AI assistant context (local only)
-CLAUDE.md
+# AI assistant context
+# CLAUDE.md is committed so both Claude Code and Cowork share context
