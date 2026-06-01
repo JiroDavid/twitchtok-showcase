@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { DemoConfig } from "../../types";
-import type { JobCreateResponse, JobStatusResponse, ProcessJobResult } from "../../types";
-import { DEMO_CLIPS } from "./demoClips";
 
 const MESSAGES = [
   "Analysing video content...",
@@ -70,81 +68,15 @@ export function ProcessingWindow({
     return () => timers.forEach(clearTimeout);
   }, []);
 
-  // Backend job
+  // Resolve to pre-cached output — no live render in demo mode
   useEffect(() => {
-    const inputPath = DEMO_CLIPS[selectedClipIndex]?.inputPath ?? "";
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-
-    async function startJob() {
-      try {
-        const body = {
-          input_path: inputPath,
-          layout: config.layout,
-          stacked_config: null,
-          captions: {
-            enabled: true,
-            burn_in: true,
-            refine_with_llm: false,
-            censor_subtitles: false,
-            default_style: {
-              color: config.color,
-              font_family: config.font,
-              font_size: 140,
-              outline: 8,
-              shadow: 3,
-            },
-          },
-          metadata: { enabled: false },
-          crop_source: "manual",
-        };
-
-        const res = await fetch("/jobs/process-video", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Job creation failed (${res.status}): ${text}`);
-        }
-
-        const { job_id }: JobCreateResponse = await res.json();
-
-        intervalId = setInterval(async () => {
-          try {
-            const statusRes = await fetch(`/jobs/${job_id}`);
-            if (!statusRes.ok) throw new Error(`Poll failed: ${statusRes.status}`);
-
-            const data: JobStatusResponse = await statusRes.json();
-
-            if (data.status === "completed") {
-              if (intervalId) clearInterval(intervalId);
-              const result = data.result as ProcessJobResult | null;
-              const url = result?.output_url ?? null;
-              if (url) {
-                jobOutputUrlRef.current = url;
-                if (messagesFinishedRef.current) {
-                  onCompleteRef.current(url);
-                }
-              }
-            } else if (data.status === "failed") {
-              if (intervalId) clearInterval(intervalId);
-              setErrorMsg("Processing failed. Please try again.");
-            }
-          } catch (err) {
-            if (intervalId) clearInterval(intervalId);
-            setErrorMsg(err instanceof Error ? err.message : "Lost connection to server.");
-          }
-        }, 2000);
-      } catch (err) {
-        setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
-      }
+    const cachedUrl = `/demo_cache/clip${selectedClipIndex + 1}/output.mp4`;
+    jobOutputUrlRef.current = cachedUrl;
+    // If the message animation already finished, complete immediately
+    if (messagesFinishedRef.current) {
+      onCompleteRef.current(cachedUrl);
     }
-
-    void startJob();
-    return () => { if (intervalId) clearInterval(intervalId); };
-  }, [selectedClipIndex, config]);
+  }, [selectedClipIndex]);
 
   if (errorMsg) {
     return (
