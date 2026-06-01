@@ -3,9 +3,11 @@
 type RevealPanelProps = {
   outputUrl: string;
   onReset: () => void;
+  onOpenSubtitleEditor: () => void;
+  onOpenCropEditor: () => void;
 };
 
-export function RevealPanel({ outputUrl, onReset }: RevealPanelProps) {
+export function RevealPanel({ outputUrl, onReset, onOpenSubtitleEditor, onOpenCropEditor }: RevealPanelProps) {
   // Cache-bust so the browser doesn't serve a stale prior render
   const videoUrl = `${outputUrl}?t=${Date.now()}`;
 
@@ -59,6 +61,25 @@ export function RevealPanel({ outputUrl, onReset }: RevealPanelProps) {
             >
               Try another clip
             </button>
+          </div>
+          <div className="mt-4 border-t border-zinc-800 pt-4">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
+              Want to fine-tune?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={onOpenSubtitleEditor}
+                className="flex-1 rounded-lg border border-violet-500/30 bg-violet-500/10 py-2 text-xs font-medium text-violet-300 transition-all hover:border-violet-400 hover:bg-violet-500/20"
+              >
+                ✏️ Edit Subtitles
+              </button>
+              <button
+                onClick={onOpenCropEditor}
+                className="flex-1 rounded-lg border border-green-500/30 bg-green-500/10 py-2 text-xs font-medium text-green-300 transition-all hover:border-green-400 hover:bg-green-500/20"
+              >
+                ✂️ Adjust Crop
+              </button>
+            </div>
           </div>
         </div>
       </div>
