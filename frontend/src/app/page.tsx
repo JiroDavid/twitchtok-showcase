@@ -27,7 +27,6 @@ export default function Home() {
   const [subtitleEditorOpen, setSubtitleEditorOpen] = useState(false);
   const [cropEditorOpen, setCropEditorOpen] = useState(false);
   const [demoCaptions, setDemoCaptions] = useState<EditableCaptionDraft[]>([]);
-  const [isApplyingSubtitles, setIsApplyingSubtitles] = useState(false); // reserved for future backend re-render wiring
 
   const cropEditor = useDemoCropEditor(selectedClipIndex, cropEditorOpen);
 
@@ -109,9 +108,7 @@ export default function Home() {
                 <div ref={processingRef}>
                   <ProcessingWindow
                     selectedClipIndex={selectedClipIndex}
-                    config={config}
                     onComplete={handleProcessingComplete}
-                    onError={() => setStage("configure")}
                   />
                 </div>
               )}
@@ -165,7 +162,7 @@ export default function Home() {
 
       <SubtitleEditorModal
         captions={demoCaptions}
-        isApplying={isApplyingSubtitles}
+        isApplying={false}
         isOpen={subtitleEditorOpen}
         onAddCaption={() => {
           setDemoCaptions((prev) => {

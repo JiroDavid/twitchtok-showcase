@@ -1,7 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
-
 type RevealPanelProps = {
   outputUrl: string;
   onReset: () => void;
@@ -10,9 +8,6 @@ type RevealPanelProps = {
 };
 
 export function RevealPanel({ outputUrl, onReset, onOpenSubtitleEditor, onOpenCropEditor }: RevealPanelProps) {
-  // Cache-bust so the browser doesn't serve a stale prior render
-  const videoUrl = useMemo(() => `${outputUrl}?t=${Date.now()}`, [outputUrl]);
-
   return (
     <section className="py-20">
       <p className="mb-10 text-center text-[10px] font-bold uppercase tracking-widest text-[#9146FF]">
@@ -27,7 +22,7 @@ export function RevealPanel({ outputUrl, onReset, onOpenSubtitleEditor, onOpenCr
           </div>
           <div className="relative overflow-hidden rounded-sm" style={{ aspectRatio: "9 / 16" }}>
             <video
-              src={videoUrl}
+              src={outputUrl}
               autoPlay
               loop
               playsInline
@@ -51,7 +46,7 @@ export function RevealPanel({ outputUrl, onReset, onOpenSubtitleEditor, onOpenCr
           </p>
           <div className="mt-6 flex flex-col gap-3">
             <a
-              href={videoUrl}
+              href={outputUrl}
               download
               className="block rounded-lg bg-[#9146FF] py-3 text-center text-sm font-bold text-white shadow-[0_2px_12px_rgba(145,70,255,0.4)] transition-all hover:bg-[#7c3aed] hover:shadow-[0_4px_20px_rgba(145,70,255,0.5)]"
             >

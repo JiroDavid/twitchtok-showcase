@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { EditableCaptionDraft } from "../types";
 
 const MIN_CAPTION_DURATION = 0.1;
@@ -60,8 +60,21 @@ export function SubtitleTimeline({
   const dragRef = useRef<DragState | null>(null);
   const [zoom, setZoom] = useState(1);
   const [scrollPx, setScrollPx] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(600);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    setContainerWidth(el.clientWidth);
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) setContainerWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const stateRef = useRef({ captions, duration, snapInterval, onChange, onSeek, zoom, scrollPx });
+  // eslint-disable-next-line react-hooks/refs
   stateRef.current = { captions, duration, snapInterval, onChange, onSeek, zoom, scrollPx };
 
   const clientXToTime = useCallback((clientX: number): number => {
@@ -130,18 +143,12 @@ export function SubtitleTimeline({
   }, [disabled, clientXToTime]);
 
   function totalWidth(): number {
-    const el = containerRef.current;
-    return el ? el.clientWidth * zoom : 600 * zoom;
+    return containerWidth * zoom;
   }
 
   function timeToPx(t: number): number {
     if (duration <= 0) return 0;
     return (t / duration) * totalWidth() - scrollPx;
-  }
-
-  function pxToTime(px: number): number {
-    if (duration <= 0) return 0;
-    return ((px + scrollPx) / totalWidth()) * duration;
   }
 
   function handleWheel(e: React.WheelEvent) {
