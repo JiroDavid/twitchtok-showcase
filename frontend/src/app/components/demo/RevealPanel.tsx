@@ -2,12 +2,21 @@
 
 type RevealPanelProps = {
   outputUrl: string;
+  isProcessing?: boolean;
+  processingError?: string | null;
   onReset: () => void;
   onOpenSubtitleEditor: () => void;
   onOpenCropEditor: () => void;
 };
 
-export function RevealPanel({ outputUrl, onReset, onOpenSubtitleEditor, onOpenCropEditor }: RevealPanelProps) {
+export function RevealPanel({
+  outputUrl,
+  isProcessing = false,
+  processingError = null,
+  onReset,
+  onOpenSubtitleEditor,
+  onOpenCropEditor,
+}: RevealPanelProps) {
   return (
     <section className="py-20">
       <p className="mb-10 text-center text-[10px] font-bold uppercase tracking-widest text-[#9146FF]">
@@ -63,20 +72,32 @@ export function RevealPanel({ outputUrl, onReset, onOpenSubtitleEditor, onOpenCr
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
               Want to fine-tune?
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={onOpenSubtitleEditor}
-                className="flex-1 rounded-lg border border-violet-500/30 bg-violet-500/10 py-2 text-xs font-medium text-violet-300 transition-all hover:border-violet-400 hover:bg-violet-500/20"
-              >
-                ✏️ Edit Subtitles
-              </button>
-              <button
-                onClick={onOpenCropEditor}
-                className="flex-1 rounded-lg border border-green-500/30 bg-green-500/10 py-2 text-xs font-medium text-green-300 transition-all hover:border-green-400 hover:bg-green-500/20"
-              >
-                ✂️ Adjust Crop
-              </button>
-            </div>
+            {processingError && (
+              <p className="mb-2 rounded-lg bg-red-500/10 px-3 py-2 text-[11px] text-red-400">
+                {processingError}
+              </p>
+            )}
+            {isProcessing ? (
+              <div className="flex items-center gap-2 rounded-lg bg-zinc-800 px-4 py-3 text-xs text-zinc-400">
+                <div className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-600 border-t-[#9146FF]" />
+                Re-rendering... this may take a moment
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={onOpenSubtitleEditor}
+                  className="flex-1 rounded-lg border border-violet-500/30 bg-violet-500/10 py-2 text-xs font-medium text-violet-300 transition-all hover:border-violet-400 hover:bg-violet-500/20"
+                >
+                  ✏️ Edit Subtitles
+                </button>
+                <button
+                  onClick={onOpenCropEditor}
+                  className="flex-1 rounded-lg border border-green-500/30 bg-green-500/10 py-2 text-xs font-medium text-green-300 transition-all hover:border-green-400 hover:bg-green-500/20"
+                >
+                  ✂️ Adjust Crop
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

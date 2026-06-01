@@ -11,6 +11,7 @@ import { MiniPhonePreview } from "./components/demo/MiniPhonePreview";
 import { CropEditorModal } from "./components/CropEditorModal";
 import { SubtitleEditorModal } from "./components/SubtitleEditorModal";
 import { useDemoCropEditor } from "./components/demo/useDemoCropEditor";
+import { useDemoRerender } from "./components/demo/useDemoRerender";
 
 const DEFAULT_CONFIG: DemoConfig = {
   font: "Montserrat",
@@ -29,6 +30,7 @@ export default function Home() {
   const [demoCaptions, setDemoCaptions] = useState<EditableCaptionDraft[]>([]);
 
   const cropEditor = useDemoCropEditor(selectedClipIndex, cropEditorOpen);
+  const demoRerender = useDemoRerender();
 
   const configureRef  = useRef<HTMLDivElement>(null);
   const processingRef = useRef<HTMLDivElement>(null);
@@ -128,6 +130,8 @@ export default function Home() {
             <div ref={revealRef}>
               <RevealPanel
                 outputUrl={outputUrl}
+                isProcessing={demoRerender.isProcessing}
+                processingError={demoRerender.error}
                 onReset={handleReset}
                 onOpenSubtitleEditor={() => setSubtitleEditorOpen(true)}
                 onOpenCropEditor={() => setCropEditorOpen(true)}
@@ -152,7 +156,14 @@ export default function Home() {
         onClose={() => setCropEditorOpen(false)}
         onLoadedData={cropEditor.onLoadedData}
         onLoadedMetadata={cropEditor.onLoadedMetadata}
-        onSave={() => setCropEditorOpen(false)}
+        onSave={async () => {
+          if (selectedClipIndex === null) return;
+          const newUrl = await demoRerender.rerenderCrop(selectedClipIndex, cropEditor.cropDraft);
+          if (newUrl) {
+            setOutputUrl(newUrl);
+            setCropEditorOpen(false);
+          }
+        }}
         onStartDrag={cropEditor.onStartDrag}
         onUpdateSplitRatio={cropEditor.onUpdateSplitRatio}
         previewContainerRef={cropEditor.previewContainerRef}
@@ -162,7 +173,7 @@ export default function Home() {
 
       <SubtitleEditorModal
         captions={demoCaptions}
-        isApplying={false}
+        isApplying={demoRerender.isProcessing}
         isOpen={subtitleEditorOpen}
         onAddCaption={() => {
           setDemoCaptions((prev) => {
@@ -184,8 +195,13 @@ export default function Home() {
             ];
           });
         }}
-        onApply={() => {
-          setSubtitleEditorOpen(false);
+        onApply={async () => {
+          if (selectedClipIndex === null) return;
+          const newUrl = await demoRerender.rerenderSubtitles(selectedClipIndex, demoCaptions);
+          if (newUrl) {
+            setOutputUrl(newUrl);
+            setSubtitleEditorOpen(false);
+          }
         }}
         onChangeCaption={(index, field, value) => {
           setDemoCaptions((prev) => {
