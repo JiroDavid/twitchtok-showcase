@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --color-twitch: #9146FF;
 }
 
 @theme inline {
@@ -12,15 +13,29 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Clip card audio-bar animation */
+@keyframes audio-bar {
+  from { transform: scaleY(0.4); }
+  to   { transform: scaleY(1.2); }
+}
+
+.animate-audio-bar {
+  animation: audio-bar 0.6s ease-in-out infinite alternate;
+  transform-origin: bottom;
+}
+
+/* Phone reveal entrance animation */
+@keyframes reveal-phone {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.animate-reveal-phone {
+  animation: reveal-phone 0.4s ease-out forwards;
 }
