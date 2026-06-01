@@ -1,0 +1,25 @@
+[
+  {
+    "id": 1,
+    "start": 0.0,
+    "end": 3.0,
+    "final_text": "Caption placeholder",
+    "style": {
+      "color": "#FFFFFF",
+      "font_family": "Montserrat",
+      "font_size": 140,
+      "outline": 8,
+      "shadow": 3
+    },
+    "placement": {
+      "track": "bottom",
+      "x": null,
+      "y": null,
+      "align": "bottom"
+    },
+    "raw_text": "",
+    "refined_text": "",
+    "status": "draft",
+    "is_manual": true
+  }
+]
