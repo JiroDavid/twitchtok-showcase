@@ -27,7 +27,7 @@ export default function Home() {
   const [subtitleEditorOpen, setSubtitleEditorOpen] = useState(false);
   const [cropEditorOpen, setCropEditorOpen] = useState(false);
   const [demoCaptions, setDemoCaptions] = useState<EditableCaptionDraft[]>([]);
-  const [isApplyingSubtitles, setIsApplyingSubtitles] = useState(false);
+  const [isApplyingSubtitles, setIsApplyingSubtitles] = useState(false); // reserved for future backend re-render wiring
 
   const cropEditor = useDemoCropEditor(selectedClipIndex, cropEditorOpen);
 
@@ -67,6 +67,9 @@ export default function Home() {
   }
 
   function handleReset() {
+    setSubtitleEditorOpen(false);
+    setCropEditorOpen(false);
+    setDemoCaptions([]);
     setStage("pick");
     setSelectedClipIndex(null);
     setConfig(DEFAULT_CONFIG);
@@ -165,22 +168,24 @@ export default function Home() {
         isApplying={isApplyingSubtitles}
         isOpen={subtitleEditorOpen}
         onAddCaption={() => {
-          const maxId = demoCaptions.reduce((m, c) => Math.max(m, c.id), 0);
-          setDemoCaptions((prev) => [
-            ...prev,
-            {
-              id: maxId + 1,
-              start: 0,
-              end: 1,
-              raw_text: "",
-              refined_text: "",
-              final_text: "",
-              status: "draft",
-              is_manual: true,
-              style: { color: "#FFFFFF", font_family: "Montserrat", font_size: 140, outline: 8, shadow: 3 },
-              placement: { track: "bottom", x: null, y: null, align: "bottom" },
-            },
-          ]);
+          setDemoCaptions((prev) => {
+            const maxId = prev.reduce((m, c) => Math.max(m, c.id), 0);
+            return [
+              ...prev,
+              {
+                id: maxId + 1,
+                start: 0,
+                end: 1,
+                raw_text: "",
+                refined_text: "",
+                final_text: "",
+                status: "draft",
+                is_manual: true,
+                style: { color: "#FFFFFF", font_family: "Montserrat", font_size: 140, outline: 8, shadow: 3 },
+                placement: { track: "bottom", x: null, y: null, align: "bottom" },
+              },
+            ];
+          });
         }}
         onApply={() => {
           setSubtitleEditorOpen(false);
@@ -227,7 +232,8 @@ export default function Home() {
           if (selectedClipIndex === null) return;
           fetch(`/demo_cache/clip${selectedClipIndex + 1}/captions.json`)
             .then((r) => r.json())
-            .then((data: EditableCaptionDraft[]) => setDemoCaptions(data));
+            .then((data: EditableCaptionDraft[]) => setDemoCaptions(data))
+            .catch(() => setDemoCaptions([]));
         }}
         onSave={() => setSubtitleEditorOpen(false)}
         outputVideoUrl={outputUrl}
