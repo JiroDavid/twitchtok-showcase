@@ -92,8 +92,8 @@ export function SubtitleEditorModal({
     let cancelled = false;
 
     async function extractPeaks() {
+      const audioCtx = new AudioContext();
       try {
-        const audioCtx = new AudioContext();
         const response = await fetch(outputVideoUrl!);
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
@@ -113,6 +113,8 @@ export function SubtitleEditorModal({
         setAudioPeaks(peaks);
       } catch {
         setAudioPeaks([]);
+      } finally {
+        void audioCtx.close();
       }
     }
 
@@ -488,6 +490,7 @@ export function SubtitleEditorModal({
               setTimelineHeight(Math.max(80, Math.min(320, resizeDragRef.current.startHeight + delta)));
             }}
             onPointerUp={() => { resizeDragRef.current = null; }}
+            onPointerCancel={() => { resizeDragRef.current = null; }}
           >
             <div className="h-1 w-8 rounded-full bg-zinc-700" />
           </div>

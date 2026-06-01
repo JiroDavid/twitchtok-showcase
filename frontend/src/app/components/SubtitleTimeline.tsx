@@ -146,8 +146,17 @@ export function SubtitleTimeline({
 
   function handleWheel(e: React.WheelEvent) {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.25 : 0.25;
-    setZoom((z) => Math.max(1, Math.min(10, z + delta)));
+    if (e.ctrlKey || e.metaKey) {
+      const delta = e.deltaY > 0 ? -0.25 : 0.25;
+      setZoom((z) => Math.max(1, Math.min(10, z + delta)));
+    } else {
+      const panDelta = e.deltaX !== 0 ? e.deltaX : e.deltaY * 0.5;
+      setScrollPx((sp) => {
+        const el = containerRef.current;
+        const maxScroll = el ? Math.max(0, el.clientWidth * (zoom - 1)) : 0;
+        return Math.max(0, Math.min(maxScroll, sp + panDelta));
+      });
+    }
   }
 
   function startSeekDrag(clientX: number) {
@@ -261,7 +270,13 @@ export function SubtitleTimeline({
         <button
           type="button"
           className="rounded px-1.5 py-0.5 text-[10px] text-zinc-500 hover:text-zinc-300 bg-zinc-900 border border-zinc-800"
-          onClick={() => setZoom((z) => Math.max(1, z - 0.5))}
+          onClick={() => {
+            setZoom((z) => {
+              const next = Math.max(1, z - 0.5);
+              if (next === 1) setScrollPx(0);
+              return next;
+            });
+          }}
         >−</button>
         <span className="text-[10px] text-zinc-600 font-mono">{zoom.toFixed(1)}×</span>
         <button
