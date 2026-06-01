@@ -344,3 +344,21 @@ export type LayoutAnalysisJobResult = {
     frame_url?: string;
   };
 };
+
+// --- Demo landing page types ---
+
+export type DemoStage = "pick" | "configure" | "processing" | "reveal";
+
+export type DemoConfig = {
+  font: HighlightFontOption;
+  color: string;
+  layout: LayoutOption;
+};
+
+export type DemoClip = {
+  title: string;
+  streamer: string;
+  duration: string;
+  videoSrc: string;
+  inputPath: string;
+};
