@@ -13,10 +13,10 @@ export function Nav() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-900/90 backdrop-blur">
+    <nav aria-label="Site navigation" className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-900/90 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
         <Link href="/" className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-md bg-[#9146FF]" />
+          <div aria-hidden="true" className="h-7 w-7 rounded-md bg-[#9146FF]" />
           <span className="font-bold text-zinc-100">TwitchTok</span>
         </Link>
         <div className="flex gap-6">

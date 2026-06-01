@@ -9,6 +9,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-twitch: var(--color-twitch);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
