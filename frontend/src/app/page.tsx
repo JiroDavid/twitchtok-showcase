@@ -1,13 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
-import type { DemoConfig, DemoStage } from "./types";
+import { useEffect, useRef, useState } from "react";
+import type { DemoConfig, DemoStage, EditableCaptionDraft } from "./types";
 import { DemoHero } from "./components/demo/DemoHero";
 import { ClipPicker } from "./components/demo/ClipPicker";
 import { StyleConfigurator } from "./components/demo/StyleConfigurator";
 import { ProcessingWindow } from "./components/demo/ProcessingWindow";
 import { RevealPanel } from "./components/demo/RevealPanel";
 import { MiniPhonePreview } from "./components/demo/MiniPhonePreview";
+import { CropEditorModal } from "./components/CropEditorModal";
+import { SubtitleEditorModal } from "./components/SubtitleEditorModal";
+import { useDemoCropEditor } from "./components/demo/useDemoCropEditor";
 
 const DEFAULT_CONFIG: DemoConfig = {
   font: "Montserrat",
@@ -21,9 +24,24 @@ export default function Home() {
   const [config, setConfig]                       = useState<DemoConfig>(DEFAULT_CONFIG);
   const [outputUrl, setOutputUrl]                 = useState<string | null>(null);
 
+  const [subtitleEditorOpen, setSubtitleEditorOpen] = useState(false);
+  const [cropEditorOpen, setCropEditorOpen] = useState(false);
+  const [demoCaptions, setDemoCaptions] = useState<EditableCaptionDraft[]>([]);
+  const [isApplyingSubtitles, setIsApplyingSubtitles] = useState(false);
+
+  const cropEditor = useDemoCropEditor(selectedClipIndex, cropEditorOpen);
+
   const configureRef  = useRef<HTMLDivElement>(null);
   const processingRef = useRef<HTMLDivElement>(null);
   const revealRef     = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!subtitleEditorOpen || selectedClipIndex === null) return;
+    fetch(`/demo_cache/clip${selectedClipIndex + 1}/captions.json`)
+      .then((r) => r.json())
+      .then((data: EditableCaptionDraft[]) => setDemoCaptions(data))
+      .catch(() => setDemoCaptions([]));
+  }, [subtitleEditorOpen, selectedClipIndex]);
 
   function scrollTo(ref: React.RefObject<HTMLDivElement | null>) {
     setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
@@ -108,11 +126,112 @@ export default function Home() {
           {/* Step 4: full-width reveal */}
           {stage === "reveal" && outputUrl && (
             <div ref={revealRef}>
-              <RevealPanel outputUrl={outputUrl} onReset={handleReset} />
+              <RevealPanel
+                outputUrl={outputUrl}
+                onReset={handleReset}
+                onOpenSubtitleEditor={() => setSubtitleEditorOpen(true)}
+                onOpenCropEditor={() => setCropEditorOpen(true)}
+              />
             </div>
           )}
         </div>
       )}
+      <CropEditorModal
+        aiCropReasoning={null}
+        aiCropStatus={null}
+        bottomPreviewStyle={cropEditor.bottomPreviewStyle}
+        cropDraft={cropEditor.cropDraft}
+        cropEditorPreviewUrl={
+          selectedClipIndex !== null ? `/clips/clip${selectedClipIndex + 1}.mp4` : null
+        }
+        cropSource="manual"
+        hideModeBadge={true}
+        isOpen={cropEditorOpen}
+        isPostRenderMode={true}
+        uiMode="non_ai"
+        onClose={() => setCropEditorOpen(false)}
+        onLoadedData={cropEditor.onLoadedData}
+        onLoadedMetadata={cropEditor.onLoadedMetadata}
+        onSave={() => setCropEditorOpen(false)}
+        onStartDrag={cropEditor.onStartDrag}
+        onUpdateSplitRatio={cropEditor.onUpdateSplitRatio}
+        previewContainerRef={cropEditor.previewContainerRef}
+        topPreviewStyle={cropEditor.topPreviewStyle}
+        videoRef={cropEditor.videoRef}
+      />
+
+      <SubtitleEditorModal
+        captions={demoCaptions}
+        isApplying={isApplyingSubtitles}
+        isOpen={subtitleEditorOpen}
+        onAddCaption={() => {
+          const maxId = demoCaptions.reduce((m, c) => Math.max(m, c.id), 0);
+          setDemoCaptions((prev) => [
+            ...prev,
+            {
+              id: maxId + 1,
+              start: 0,
+              end: 1,
+              raw_text: "",
+              refined_text: "",
+              final_text: "",
+              status: "draft",
+              is_manual: true,
+              style: { color: "#FFFFFF", font_family: "Montserrat", font_size: 140, outline: 8, shadow: 3 },
+              placement: { track: "bottom", x: null, y: null, align: "bottom" },
+            },
+          ]);
+        }}
+        onApply={() => {
+          setSubtitleEditorOpen(false);
+        }}
+        onChangeCaption={(index, field, value) => {
+          setDemoCaptions((prev) => {
+            const next = [...prev];
+            next[index] = { ...next[index], [field]: value };
+            return next;
+          });
+        }}
+        onChangePlacement={(index, field, value) => {
+          setDemoCaptions((prev) => {
+            const next = [...prev];
+            next[index] = {
+              ...next[index],
+              placement: { ...next[index].placement, [field]: value },
+            };
+            return next;
+          });
+        }}
+        onChangeTiming={(index, start, end) => {
+          setDemoCaptions((prev) => {
+            const next = [...prev];
+            next[index] = { ...next[index], start, end };
+            return next;
+          });
+        }}
+        onChangeStyle={(index, field, value) => {
+          setDemoCaptions((prev) => {
+            const next = [...prev];
+            next[index] = {
+              ...next[index],
+              style: { ...next[index].style, [field]: value },
+            };
+            return next;
+          });
+        }}
+        onClose={() => setSubtitleEditorOpen(false)}
+        onDeleteCaption={(id) =>
+          setDemoCaptions((prev) => prev.filter((c) => c.id !== id))
+        }
+        onReset={() => {
+          if (selectedClipIndex === null) return;
+          fetch(`/demo_cache/clip${selectedClipIndex + 1}/captions.json`)
+            .then((r) => r.json())
+            .then((data: EditableCaptionDraft[]) => setDemoCaptions(data));
+        }}
+        onSave={() => setSubtitleEditorOpen(false)}
+        outputVideoUrl={outputUrl}
+      />
     </main>
   );
 }
