@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 type RevealPanelProps = {
   outputUrl: string;
   onReset: () => void;
@@ -9,7 +11,7 @@ type RevealPanelProps = {
 
 export function RevealPanel({ outputUrl, onReset, onOpenSubtitleEditor, onOpenCropEditor }: RevealPanelProps) {
   // Cache-bust so the browser doesn't serve a stale prior render
-  const videoUrl = `${outputUrl}?t=${Date.now()}`;
+  const videoUrl = useMemo(() => `${outputUrl}?t=${Date.now()}`, [outputUrl]);
 
   return (
     <section className="py-20">

@@ -88,7 +88,7 @@ export function SubtitleEditorModal({
   }, [selectedCaptionId]);
 
   useEffect(() => {
-    if (!outputVideoUrl) return;
+    if (!isOpen || !outputVideoUrl) return;
     let cancelled = false;
 
     async function extractPeaks() {
@@ -120,7 +120,7 @@ export function SubtitleEditorModal({
 
     void extractPeaks();
     return () => { cancelled = true; };
-  }, [outputVideoUrl]);
+  }, [outputVideoUrl, isOpen]);
 
   if (!isOpen) return null;
 
