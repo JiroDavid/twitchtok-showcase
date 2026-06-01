@@ -32,3 +32,6 @@ backend/storage/outputs/*
 
 # AI assistant context
 # CLAUDE.md is committed so both Claude Code and Cowork share context
+
+# Brainstorming session files (local only)
+.superpowers/
