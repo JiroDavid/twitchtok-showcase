@@ -127,25 +127,52 @@ export function SubtitleEditorModal({
 
             <div className="mt-4 flex min-h-[420px] items-center justify-center rounded-3xl border border-zinc-800 bg-zinc-900 p-4">
               {outputVideoUrl ? (
-                <video
-                  ref={videoRef}
-                  key={outputVideoUrl}
-                  controls
-                  className="max-h-[620px] rounded-2xl border border-zinc-800"
-                  src={outputVideoUrl}
-                  onTimeUpdate={() => {
-                    if (videoRef.current)
-                      setCurrentTime(videoRef.current.currentTime);
-                  }}
-                  onLoadedMetadata={() => {
-                    if (videoRef.current)
-                      setVideoDuration(videoRef.current.duration);
-                  }}
-                />
-              ) : (
-                <div className="text-sm text-zinc-500">
-                  No preview video available.
+                <div className="relative">
+                  <video
+                    ref={videoRef}
+                    key={outputVideoUrl}
+                    controls
+                    className="max-h-[620px] rounded-2xl border border-zinc-800"
+                    src={outputVideoUrl}
+                    onTimeUpdate={() => {
+                      if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
+                    }}
+                    onLoadedMetadata={() => {
+                      if (videoRef.current) setVideoDuration(videoRef.current.duration);
+                    }}
+                  />
+                  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+                    {captions
+                      .filter((c) => currentTime >= c.start && currentTime < c.end)
+                      .map((c) => {
+                        const isTop = c.placement.track === "top";
+                        const isBottom = c.placement.track === "bottom";
+                        return (
+                          <div
+                            key={c.id}
+                            className="absolute left-0 right-0 px-3 text-center"
+                            style={{
+                              top: isTop ? "8%" : undefined,
+                              bottom: isBottom ? "8%" : undefined,
+                              ...(c.placement.track === "free" && c.placement.y != null
+                                ? { top: `${c.placement.y}%` }
+                                : {}),
+                              color: c.style.color,
+                              fontFamily: c.style.font_family,
+                              fontSize: `${Math.min(c.style.font_size / 4, 48)}px`,
+                              fontWeight: 900,
+                              lineHeight: 1.2,
+                              textShadow: `0 0 ${Math.max(1, c.style.shadow)}px rgba(0,0,0,0.95), 0 0 ${Math.max(1, c.style.outline)}px rgba(0,0,0,0.95)`,
+                            }}
+                          >
+                            {c.final_text}
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
+              ) : (
+                <div className="text-sm text-zinc-500">No preview video available.</div>
               )}
             </div>
 
