@@ -58,6 +58,109 @@ ollama pull llama3.1:8b       # text: titles, hashtags, refinement
 
 ## Setup
 
+There are two setup paths depending on the machine. Jump to the one that applies.
+
+- [Windows (no WSL)](#windows-setup-no-wsl)
+- [Linux / macOS / WSL](#linux-macos-wsl-setup)
+
+---
+
+## Windows setup (no WSL)
+
+### Step 1 - Install prerequisites
+
+Open **PowerShell as Administrator** and run:
+
+```powershell
+# Git (includes Git Bash and Git Credential Manager)
+winget install Git.Git
+
+# Git LFS — must be installed before cloning
+winget install GitHub.GitLFS
+
+# Python 3.11 (tick "Add python.exe to PATH" in the installer)
+winget install Python.Python.3.11
+
+# Node.js LTS
+winget install OpenJS.NodeJS.LTS
+
+# FFmpeg (adds ffmpeg to PATH automatically)
+winget install Gyan.FFmpeg
+```
+
+Close and reopen PowerShell after these finish so the new PATH entries take effect.
+
+Verify everything is on PATH:
+
+```powershell
+git --version
+git lfs --version
+python --version
+node --version
+ffmpeg -version
+```
+
+### Step 2 - Allow PowerShell scripts
+
+Python virtual environments use `.ps1` activation scripts. Allow them to run:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+### Step 3 - Clone the repo
+
+```powershell
+git lfs install
+git clone https://github.com/JiroDavid/twitchtok-showcase.git
+cd twitchtok-showcase
+```
+
+> If the HTTPS clone asks for credentials, sign in with your GitHub username and a Personal Access Token (not your password). Generate one at github.com/settings/tokens with `repo` scope.
+
+### Step 4 - Backend
+
+```powershell
+cd backend
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+No `.env` file is needed for demo mode.
+
+### Step 5 - Frontend
+
+```powershell
+cd ..\frontend
+npm install
+```
+
+### Step 6 - Run
+
+Open **two separate PowerShell windows**, both from the repo root.
+
+**Window 1 - backend:**
+
+```powershell
+cd backend
+.venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+**Window 2 - frontend:**
+
+```powershell
+cd frontend
+npm run dev
+```
+
+Open **http://localhost:3000** in a browser.
+
+---
+
+## Linux / macOS / WSL setup
+
 ### 1. Clone (with LFS)
 
 ```bash
@@ -77,7 +180,7 @@ git lfs pull
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate     # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -106,7 +209,9 @@ npm install
 
 ---
 
-## Running
+## Running (Linux / macOS / WSL)
+
+Two terminals from the repo root:
 
 ```bash
 # Terminal 1: backend
@@ -120,6 +225,8 @@ cd frontend && npm run dev
 Open **http://localhost:3000** - the demo landing page loads by default.
 
 For the full pipeline, navigate to **http://localhost:3000/app**.
+
+Windows users: see the [Windows setup](#windows-setup-no-wsl) section above which has the run commands in the correct PowerShell syntax.
 
 ---
 
@@ -219,6 +326,18 @@ Git LFS wasn't installed before cloning. Run `git lfs install` then `git lfs pul
 ```bash
 ffmpeg -version   # check it's on PATH
 ```
+On Windows, close and reopen PowerShell after installing FFmpeg via winget.
+
+**PowerShell blocks the venv activation script (Windows)**
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**`python` not found (Windows)**
+During the Python installer, tick "Add python.exe to PATH". If you already installed without it, re-run the installer and choose Modify, then tick that option.
+
+**HTTPS clone asks for a password (Windows)**
+GitHub no longer accepts account passwords for git operations. Use a Personal Access Token instead. Generate one at github.com/settings/tokens with `repo` scope and paste it as the password when prompted.
 
 **Ollama models not responding** (full pipeline only)
 ```bash
