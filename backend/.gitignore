@@ -2,6 +2,12 @@
 venv/
 __pycache__/
 *.pyc
-storage/downloads/
-storage/outputs/
-storage/temp/
+storage/downloads/*
+!storage/downloads/.gitkeep
+!storage/downloads/clip1_cut.mp4
+!storage/downloads/clip2_cut.mp4
+!storage/downloads/clip3_cut.mp4
+storage/outputs/*
+!storage/outputs/.gitkeep
+storage/temp/*
+!storage/temp/.gitkeep

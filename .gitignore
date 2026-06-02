@@ -27,6 +27,9 @@ backend/storage/temp/*
 backend/storage/outputs/*
 
 !backend/storage/downloads/.gitkeep
+!backend/storage/downloads/clip1_cut.mp4
+!backend/storage/downloads/clip2_cut.mp4
+!backend/storage/downloads/clip3_cut.mp4
 !backend/storage/temp/.gitkeep
 !backend/storage/outputs/.gitkeep
 
