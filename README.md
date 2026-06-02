@@ -1,116 +1,102 @@
-# AI Twitch Clip Editor
+# TwitchTok
 
-Convert landscape Twitch clips into vertical 9:16 short-form videos with AI-generated subtitles, smart crop detection, and social media metadata from a local web UI.
+Convert landscape Twitch clips into vertical 9:16 short-form videos with AI-generated subtitles, smart crop detection, and social-media metadata — with an interactive demo website for live showcasing.
 
-## Features
+---
 
-- **Twitch Integration**: log in with OAuth or paste any clip URL to download directly
-- **Vertical Reformatting**: three layout modes: cropped, fullscreen, and stacked (facecam over gameplay)
-- **AI Subtitles**: Whisper transcription with optional LLM refinement and profanity filtering
-- **Smart Crop Detection**: Ollama vision model detects facecam and gameplay regions automatically
-- **Metadata Generation**: AI-generated titles, hashtags, and summaries for YouTube/TikTok/Instagram
-- **Live Caption Editor**: edit subtitles with a timeline preview before re-rendering
-- **Crop Editor**: visually adjust AI-suggested crop boxes and re-render without re-transcribing
+## Modes
+
+### Demo mode (CCI Festival stand)
+
+A polished landing page with 3 pre-loaded Twitch clips. Visitors pick a clip, configure the style, and watch the AI pipeline produce a captioned vertical video in real time. The slow AI steps (Whisper, crop detection) are pre-cached; only the FFmpeg subtitle burn-in runs live, so it's fast and reliable.
+
+### Full pipeline mode
+
+The `/app` route exposes the complete pipeline: Twitch OAuth login, paste-URL clip download, Whisper transcription, Ollama vision + LLM metadata generation, and the full editor UI.
 
 ---
 
 ## Prerequisites
 
-Install these before anything else.
-
-### System Tools
-
 | Tool | Purpose | Install |
 |------|---------|---------|
-| **Python 3.10+** | Backend runtime | [python.org](https://www.python.org/downloads/) |
+| **Python 3.10+** | Backend runtime | [python.org](https://python.org/downloads/) |
 | **Node.js 18+** | Frontend runtime | [nodejs.org](https://nodejs.org/) |
-| **FFmpeg** | Video processing | See below |
-| **Ollama** | Local LLM inference | [ollama.com](https://ollama.com/download) |
+| **FFmpeg** | Video processing | `sudo apt install ffmpeg` / `brew install ffmpeg` |
+| **Git LFS** | Large video file download | See below |
 
-**FFmpeg:**
-```bash
-# Ubuntu / Debian
-sudo apt install ffmpeg
-
-# macOS (Homebrew)
-brew install ffmpeg
-
-# Windows: download from https://ffmpeg.org/download.html and add to PATH
-```
-
-### AI Models
-
-You need to download three models before the app will work fully.
-
-#### 1. Whisper (speech-to-text)
-
-Whisper downloads automatically on first use. The app uses the `medium` model (~1.5 GB).
-
-If you want to pre-download it:
-```bash
-pip install openai-whisper
-python -c "import whisper; whisper.load_model('medium')"
-```
-
-> **Smaller/faster alternatives:** You can change `DEFAULT_WHISPER_MODEL` in `backend/app/services/transcription.py` to `"small"` (~500 MB) or `"base"` (~150 MB) if you need faster transcription at some quality cost.
-
-| Model | Size | Speed | Quality |
-|-------|------|-------|---------|
-| `base` | ~150 MB | Fastest | Lower |
-| `small` | ~500 MB | Fast | Good |
-| `medium` | ~1.5 GB | Moderate | Better |
-| `large` | ~3 GB | Slow | Best |
-
-#### 2. Ollama Models (vision + text generation)
-
-After installing Ollama, pull both models:
+**Git LFS** must be installed before cloning or pulling, or the `.mp4` files will be stubs.
 
 ```bash
-# Vision model: used for layout analysis and visual metadata notes
-ollama pull llava-llama3:8b
+# Ubuntu / Debian / WSL
+sudo apt install git-lfs
 
-# Text generation model: used for metadata (titles, hashtags, summaries) and subtitle refinement
-ollama pull llama3.1:8b
+# macOS
+brew install git-lfs
+
+# Windows
+winget install GitHub.GitLFS
+
+# After installing, initialise once per machine:
+git lfs install
 ```
 
-> `llava-llama3:8b` is ~5 GB and `llama3.1:8b` is ~4.7 GB. Make sure Ollama is running (`ollama serve`) before starting the backend.
+### Full pipeline only
+
+| Tool | Purpose |
+|------|---------|
+| **Ollama** | Local LLM inference for metadata + subtitle refinement |
+| Twitch Developer App | OAuth login and clips API |
+
+```bash
+# Pull the required Ollama models after installing Ollama
+ollama pull llava-llama3:8b   # vision — crop detection
+ollama pull llama3.1:8b       # text — titles, hashtags, refinement
+```
 
 ---
 
-## Twitch App Setup
+## Setup
 
-The app requires a Twitch application for OAuth login and the clips API.
-
-1. Go to [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps) and click **Register Your Application**
-2. Set **OAuth Redirect URL** to `http://localhost:8000/auth/twitch/callback`
-3. Copy the **Client ID** and generate a **Client Secret**
-4. Add them to `backend/.env` (see Configuration below)
-
----
-
-## Installation
-
-### 1. Clone the repo
+### 1. Clone (with LFS)
 
 ```bash
-git clone https://github.com/your-username/ai-twitch-clip-editor.git
-cd ai-twitch-clip-editor
+git lfs install        # only needed once per machine
+git clone https://github.com/JiroDavid/twitchtok-showcase.git
+cd twitchtok-showcase
 ```
 
-### 2. Backend setup
+If you already cloned without LFS, fetch the video assets:
+
+```bash
+git lfs pull
+```
+
+### 2. Backend
 
 ```bash
 cd backend
-
-# Create and activate a virtual environment
 python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
-
-# Install dependencies
+source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Frontend setup
+Create `backend/.env`:
+
+```env
+APP_NAME=TwitchTok API
+DEBUG=true
+HOST=127.0.0.1
+PORT=8000
+
+# Only needed for full pipeline mode:
+TWITCH_CLIENT_ID=your_client_id_here
+TWITCH_CLIENT_SECRET=your_client_secret_here
+TWITCH_REDIRECT_URI=http://localhost:8000/auth/twitch/callback
+FRONTEND_URL=http://localhost:3000
+```
+
+### 3. Frontend
 
 ```bash
 cd frontend
@@ -119,218 +105,125 @@ npm install
 
 ---
 
-## Configuration
-
-### Backend — `backend/.env`
-
-Create `backend/.env` (copy from the example below):
-
-```env
-APP_NAME=AI Twitch Clip Editor API
-DEBUG=true
-HOST=127.0.0.1
-PORT=8000
-
-# Twitch Developer App credentials
-TWITCH_CLIENT_ID=your_client_id_here
-TWITCH_CLIENT_SECRET=your_client_secret_here
-TWITCH_REDIRECT_URI=http://localhost:8000/auth/twitch/callback
-
-# Frontend URL (where OAuth will redirect back to)
-FRONTEND_URL=http://localhost:3000
-```
-
-### Frontend — `frontend/.env.local`
-
-Create `frontend/.env.local`:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
----
-
-## Running the App
-
-You need three things running: Ollama, the backend, and the frontend.
-
-### 1. Start Ollama
+## Running
 
 ```bash
-ollama serve
-```
-
-### 2. Start the backend
-
-```bash
-cd backend
-source .venv/bin/activate    # Windows: .venv\Scripts\activate
+# Terminal 1 — backend
+cd backend && source .venv/bin/activate
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# Terminal 2 — frontend
+cd frontend && npm run dev
 ```
 
-### 3. Start the frontend
+Open **http://localhost:3000** — the demo landing page loads by default.
 
-```bash
-cd frontend
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+For the full pipeline, navigate to **http://localhost:3000/app**.
 
 ---
 
-## Usage
+## Demo landing page
 
-### Getting clips
+The demo at `/` walks through 4 steps with auto-scroll:
 
-There are three ways to load a clip:
+1. **Pick a clip** — 3 pre-loaded Twitch highlights, hover to preview with audio
+2. **Customise** — choose font, caption colour, and layout (Cropped / Fullscreen / Stacked). Each clip has a recommended layout badge.
+3. **Processing** — animated AI step messages run while FFmpeg burns the captions in live. Holds on "Finishing up..." until the render actually completes.
+4. **Reveal** — the finished captioned vertical clip plays in a phone frame. AI-generated TikTok title, description, and hashtags appear below.
 
-1. **Twitch Login** — click "Connect Twitch" to OAuth in and browse your recent clips
-2. **Paste URL** — paste any `clips.twitch.tv` URL into the URL panel
-3. **Re-process** — pick a previously downloaded `.mp4` from the downloaded files panel
+### Pre-loaded clips
 
-### Processing a clip
+| # | Clip | Recommended layout |
+|---|------|-------------------|
+| 1 | Ludwig crashing out after losing a League of Legends tournament | Stacked |
+| 2 | JasonTheWeen + Maya — Maya hands Jason a toad from her animal sanctuary | Cropped |
+| 3 | Stable Ronaldo interviews Cyr (as Zorg) + Peach (as Leeloo Dallas) at the Streamer Awards | Fullscreen |
 
-1. Select a clip and click **Configure**
-2. Choose your layout:
-   - **Cropped** — center crop of the original video scaled to fill 9:16
-   - **Fullscreen** — letterboxed/pillarboxed to fit 9:16 without cropping
-   - **Stacked** — facecam on top, gameplay on bottom (AI detects regions automatically)
-3. Configure subtitles (toggle, style, profanity filter, LLM refinement)
-4. Configure metadata generation (title, hashtags, summary)
-5. Click **Process** and watch the job panel for progress
+### Caption colours
 
-### Editing subtitles
-
-After processing, click **Edit Subtitles** to open the caption editor:
-- Click any subtitle segment to edit the text
-- Adjust timing with the timeline
-- Change font, size, color, outline, and shadow
-- Toggle profanity censoring
-- Click **Re-render** to apply changes without re-transcribing
-
-### Adjusting crop (Stacked layout)
-
-Click **Edit Crop** to open the crop editor:
-- The AI-suggested facecam and gameplay regions are shown
-- Drag the handles to adjust
-- Click **Re-render** to apply
-
-### Outputs
-
-Processed files are saved to `backend/storage/outputs/`:
-
-| File | Description |
-|------|-------------|
-| `<slug>.mp4` | Final vertical video |
-| `<slug>.srt` | Subtitles in SRT format |
-| `<slug>.ass` | Subtitles in ASS format (styled) |
-| `<slug>_metadata.json` | AI-generated titles, hashtags, summary |
-| `<slug>_frame.jpg` | Representative frame used for vision analysis |
+The demo uses per-speaker caption colours baked into each clip's `captions.json`:
+- Bottom track uses the colour picker selected by the visitor
+- Top track speakers have fixed colours: pink for one speaker, orange for another where applicable
 
 ---
 
-## ngrok Support (optional)
-
-Everything runs locally by default. ngrok is only needed if Twitch OAuth refuses `localhost` as a redirect URI (some Twitch app configs require a public URL). The ngrok config is already present in the codebase but commented out.
-
-To enable it:
-
-1. Install ngrok and expose the backend:
-   ```bash
-   ngrok http 8000
-   ```
-
-2. Uncomment and update the ngrok lines in `backend/.env`:
-   ```env
-   TWITCH_REDIRECT_URI=https://your-subdomain.ngrok-free.app/auth/twitch/callback
-   FRONTEND_URL=https://your-subdomain.ngrok-free.app
-   ```
-
-3. Uncomment the ngrok origin in `backend/app/main.py` (CORS allow list).
-
-4. Uncomment the ngrok entry in `frontend/next.config.ts` (`allowedDevOrigins`).
-
-5. Update the redirect URL in your Twitch Developer Console to match the ngrok URL.
-
-To go back to local-only, re-comment those lines and set the Twitch console redirect back to `http://localhost:8000/auth/twitch/callback`.
-
----
-
-## Project Structure
+## Project structure
 
 ```
-ai-twitch-clip-editor/
+twitchtok-showcase/
 ├── backend/
 │   ├── app/
-│   │   ├── core/config.py          # Settings (Pydantic)
-│   │   ├── main.py                 # FastAPI app, CORS, static mounts
+│   │   ├── main.py                     # FastAPI app, CORS, static mounts
 │   │   ├── routes/
-│   │   │   ├── auth.py             # Twitch OAuth
-│   │   │   ├── clips.py            # Clip download/resolve
-│   │   │   └── jobs.py             # Job queue and status
-│   │   ├── schemas/                # Pydantic request/response models
+│   │   │   ├── auth.py                 # Twitch OAuth
+│   │   │   ├── clips.py                # Clip download and resolve
+│   │   │   ├── demo.py                 # Demo cache endpoints (rerender, promote)
+│   │   │   └── jobs.py                 # Job queue and status polling
 │   │   └── services/
-│   │       ├── transcription.py    # Whisper speech-to-text
-│   │       ├── video.py            # FFmpeg video processing
-│   │       ├── layout_analysis.py  # Ollama vision — crop detection
-│   │       ├── vision_analysis.py  # Ollama vision — frame notes
+│   │       ├── transcription.py        # Whisper + ASS/SRT generation
+│   │       ├── video.py                # FFmpeg video processing
+│   │       ├── layout_analysis.py      # Ollama vision — crop detection
 │   │       ├── metadata_generation.py  # Ollama LLM — titles/hashtags
-│   │       ├── caption_refinement.py   # Ollama LLM — subtitle cleanup
-│   │       ├── profanity_filter.py     # Regex-based word censoring
-│   │       ├── twitch_api.py       # yt-dlp + Twitch Helix API
-│   │       └── twitch_auth.py      # OAuth token exchange
+│   │       └── caption_refinement.py   # Ollama LLM — subtitle cleanup
 │   ├── storage/
-│   │   ├── downloads/              # Raw downloaded clips
-│   │   ├── outputs/                # Processed videos and metadata
-│   │   └── temp/                   # Temporary processing files
+│   │   ├── downloads/                  # clip{1,2,3}_cut.mp4 (LFS-tracked)
+│   │   └── outputs/                    # Job outputs (gitignored)
 │   └── requirements.txt
 └── frontend/
-    ├── src/app/
-    │   ├── page.tsx                # Main app state and layout
-    │   ├── types.ts                # TypeScript interfaces
-    │   ├── utils.ts                # Utility functions
-    │   └── components/             # UI panels and modals
-    ├── next.config.ts              # API proxy rewrites
-    └── package.json
+    ├── public/
+    │   ├── clips/                      # clip{1,2,3}_cut.mp4 (LFS-tracked, live preview)
+    │   └── demo_cache/
+    │       └── clip{1,2,3}/
+    │           ├── base_{cropped,fullscreen,stacked}.mp4   # LFS-tracked, rerender inputs
+    │           ├── output.mp4                              # LFS-tracked, reveal output
+    │           └── captions.json                           # Caption timing + styles
+    └── src/app/
+        ├── page.tsx                    # Demo landing page
+        ├── app/page.tsx                # Full pipeline UI
+        ├── utils.ts                    # applyConfigToCaptions (per-speaker colour logic)
+        └── components/demo/
+            ├── ClipPicker.tsx          # Step 1 — clip selection with audio preview
+            ├── StyleConfigurator.tsx   # Step 2 — font, colour, layout
+            ├── ProcessingWindow.tsx    # Step 3 — animated progress, waits for real render
+            ├── RevealPanel.tsx         # Step 4 — output video + AI metadata
+            └── MiniPhonePreview.tsx    # Live phone preview during configuration
 ```
 
 ---
 
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
 |-------|-----------|
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS v4 |
 | Backend | Python, FastAPI, Uvicorn |
-| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS |
-| Speech-to-text | OpenAI Whisper |
-| Vision & LLM | Ollama (`llava-llama3:8b`, `llama3.1:8b`) |
+| Speech-to-text | faster-whisper |
+| Vision + LLM | Ollama (`llava-llama3:8b`, `llama3.1:8b`) |
 | Video processing | FFmpeg |
 | Clip download | yt-dlp |
 | Auth | Twitch OAuth2 |
+| Large files | Git LFS |
 
 ---
 
 ## Troubleshooting
 
-**Ollama models not responding**
-Make sure `ollama serve` is running and the models are pulled:
-```bash
-ollama list    # should show llava-llama3:8b and llama3.1:8b
-```
+**Video files are tiny (a few hundred bytes)**
+Git LFS wasn't installed before cloning. Run `git lfs install` then `git lfs pull`.
 
-**Whisper is slow**
-Switch to a smaller model in `backend/app/services/transcription.py`:
-```python
-DEFAULT_WHISPER_MODEL = "small"   # or "base"
-```
-
-**Twitch OAuth redirect fails**
-- Confirm `TWITCH_REDIRECT_URI` in `.env` exactly matches what's registered in the Twitch Developer Console (including trailing slashes)
-- For local development without ngrok, set the redirect URI to `http://localhost:8000/auth/twitch/callback`
+**Backend can't find clip files**
+`backend/storage/downloads/clip{N}_cut.mp4` must exist. Run `git lfs pull` if missing.
 
 **FFmpeg not found**
-Verify FFmpeg is on your PATH:
 ```bash
-ffmpeg -version
+ffmpeg -version   # check it's on PATH
 ```
+
+**Ollama models not responding** (full pipeline only)
+```bash
+ollama serve      # must be running
+ollama list       # should show llava-llama3:8b and llama3.1:8b
+```
+
+**Twitch OAuth redirect fails** (full pipeline only)
+Confirm `TWITCH_REDIRECT_URI` in `.env` exactly matches the redirect URI registered in the Twitch Developer Console.

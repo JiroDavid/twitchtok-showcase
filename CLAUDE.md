@@ -1,81 +1,117 @@
-# TwitchTok Showcase
+# TwitchTok Showcase — Claude Instructions
 
-A full, working multi-page website for the CCI Summer Festival stand. Visitors land on a polished
-demo page; the real pipeline (Twitch login, file upload) works behind it so Jiro can walk people
-through the whole product.
+## What this project is
 
-Built from the dissertation repo. The original is preserved at the `dissertation` remote -- never
-push there.
+A full-stack demo website built for the CCI Summer Festival stand. Visitors use a polished
+interactive demo on the landing page; the real AI pipeline (Twitch login, file upload, live
+Whisper + FFmpeg processing) runs behind it so the developer can walk people through the full product.
 
----
-
-## Stack
-
-- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS v4
-- **Backend:** FastAPI (Python), FFmpeg, Whisper
-- **Dev:** WSL2, `~/repos/twitchtok-showcase`; run `npm run dev` from `frontend/`
+Original dissertation repo is preserved at the `dissertation` git remote — never push there.
 
 ---
 
-## Site structure
+## Architecture overview
 
-| Page | Purpose |
-|------|---------|
-| `/` (landing) | The showpiece. Demo flow lives here. |
-| `/app` | Real app UI -- Twitch login + clip editor |
-| `/upload` | File/URL input modes |
-| `/faq` | What it is, how it works, tech, contact |
+```
+frontend/   Next.js 16 on :3000
+backend/    FastAPI on :8000
+```
 
-Navigation makes it feel like one polished product.
-
----
-
-## Demo flow (landing page)
-
-Single page with auto-scroll between steps:
-
-1. Pick one of 3 preloaded Twitch clips (hover to preview, click to select)
-2. Configure -- font, colour, layout
-3. Processing window (5-10s): stepped messages ("AI analysing... Whisper transcribing... Rendering...")
-4. Reveal -- finished captioned vertical clip plays
-
-### Caching architecture
-
-The slow AI steps (Whisper transcript + crop coords) are pre-computed per clip and cached. At demo
-time the styling renders live from that cache via FFmpeg. Fast, deterministic, nothing faked -- the
-AI step is just pre-run.
+Next.js proxies all `/api/*`, `/jobs/*`, `/clips/*`, `/demo-cache/*`, `/storage/*` requests to
+the backend via rewrites in `next.config.ts`. Static assets (clips, demo cache) are served
+directly from `frontend/public/`.
 
 ---
 
-## Design direction
+## Demo mode vs full pipeline
 
-- Twitch-purple accent (`#9146FF`) throughout
-- Dark base (zinc-950 / zinc-900)
-- Clean, modern type -- no clutter
-- Mouse and keyboard input (stand PC); normal tap-target sizing
-- Responsive but optimised for a large widescreen stand display
-- The landscape-to-vertical morph and the finished-video reveal are the high-polish moments
+### Demo mode (landing page `/`)
+
+Pre-cached AI results, live styling via FFmpeg at click time.
+
+**Assets on disk (committed via Git LFS):**
+- `frontend/public/clips/clip{1,2,3}_cut.mp4` — source clips for live preview
+- `frontend/public/demo_cache/clip{N}/base_{cropped,fullscreen,stacked}.mp4` — pre-rendered layout bases (no captions), used as FFmpeg input for subtitle burn-in
+- `frontend/public/demo_cache/clip{N}/output.mp4` — most recent captioned output, shown in Step 4
+- `frontend/public/demo_cache/clip{N}/captions.json` — caption timing + per-caption style/placement
+- `backend/storage/downloads/clip{N}_cut.mp4` — needed by the backend for crop re-renders
+
+**Demo flow (4 steps, auto-scroll):**
+1. Pick one of 3 preloaded clips (ClipPicker — hover to preview with audio, click to select)
+2. Configure font, colour, layout (StyleConfigurator — recommended badge per clip)
+3. Processing window (ProcessingWindow — fake stepped messages, real FFmpeg job runs in parallel, holds at "Finishing up..." until render resolves)
+4. Reveal — captioned vertical clip plays in phone frame, AI-generated TikTok metadata shown below
+
+**Clip roster:**
+| Index | Clip | Recommended layout |
+|-------|------|--------------------|
+| 0 | Ludwig crashing out (League tournament) | Stacked |
+| 1 | JasonTheWeen + Maya (frog sanctuary) | Cropped |
+| 2 | Stable Ronaldo interviews Cyr (Zorg) + Peach (Leeloo) at Streamer Awards | Fullscreen |
+
+### Full pipeline (`/app` route)
+
+Twitch OAuth, paste-URL, or uploaded file. Runs Whisper, FFmpeg, optional Ollama LLM. Separate
+from the demo; handled by `frontend/src/app/app/page.tsx`.
 
 ---
 
-## Work tracks
+## Caption color system
 
-**Track A -- Frontend (priority)**
-1. Landing/demo page hero
-2. Branding pass (purple accent, type, spacing)
-3. Clean up existing app UI for the `/app` route
-4. FAQ + upload pages
+`applyConfigToCaptions` in `frontend/src/app/utils.ts` controls how the style config is applied:
+- **Bottom track** — gets the config color picker value
+- **Top track** — keeps its own `style.color` from `captions.json` (not overridden)
 
-**Track B -- AI pipeline (run in parallel)**
-1. Audit current models in use (Whisper model size, crop detection approach)
-2. Swap to `faster-whisper` large-v3 + VAD (16kHz mono audio)
-3. Replace LLaVA crop detection with YOLOv8 / MediaPipe face tracking
-4. Pre-cache transcript + crop coords for the 3 demo clips
+This lets each clip have per-speaker colors baked into captions.json:
+
+| Clip | Bottom track | Top track |
+|------|-------------|-----------|
+| Ludwig (clip1) | config color | Pink `#FF69B4` except "It's not over / we can do this" and "No we can still do this" which are Orange `#FF8C00` |
+| Jason+Maya (clip2) | config color (Jason) | Pink `#FF69B4` (Maya) |
+| Ron/Cyr/Peach (clip3) | config color (Ron) | Pink `#FF69B4` for Leeloo lines only ("Leeloo Dallas Multipass", "Multipass!"); Orange `#FF8C00` for Zorg/third-speaker lines |
 
 ---
 
-## Conventions
+## Key backend routes
 
-- No em dashes (--) in copy or comments; use a regular dash or rewrite the sentence
-- No comments unless the WHY is non-obvious
+| Route | Purpose |
+|-------|---------|
+| `POST /demo-cache/subtitle-rerender` | Re-burn captions onto a base video |
+| `POST /demo-cache/{clip_index}/promote` | Copy job output to demo_cache folder |
+| `POST /demo-cache/crop-rerender` | Re-crop from cut clip with new stacked config |
+| `GET /jobs/{job_id}` | Poll job status |
+
+The demo subtitle rerender writes updated captions to `OUTPUTS_DIR` (not back to the source
+`captions.json`) to avoid corrupting the demo cache between renders.
+
+---
+
+## captions.json format
+
+The file can be either a plain JSON array (`[{id, start, end, final_text, style, placement}, ...]`)
+or a dict (`{"captions": [...], "edited": true}`). `load_captions_json` in `transcription.py`
+and all three frontend fetch sites normalise both formats.
+
+---
+
+## Code conventions
+
+- No em dashes in copy or comments — use a regular dash or rewrite
+- No comments unless the WHY is non-obvious (hidden constraint, workaround, surprising invariant)
 - Commit to `origin` (twitchtok-showcase); never push to `dissertation`
+- Large video files tracked via Git LFS (`*.mp4` in `.gitattributes`)
+- Backend storage (`storage/downloads/*`, `storage/outputs/*`) is gitignored except the 3 demo cut clips
+
+---
+
+## Running locally
+
+```bash
+# Backend (from repo root)
+cd backend && source .venv/bin/activate && uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# Frontend (from repo root)
+cd frontend && npm run dev
+```
+
+Open http://localhost:3000 — the demo landing page is the default route.
