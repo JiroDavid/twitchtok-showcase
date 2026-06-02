@@ -62,7 +62,7 @@ ollama pull llama3.1:8b       # text — titles, hashtags, refinement
 
 ```bash
 git lfs install        # only needed once per machine
-git clone https://github.com/JiroDavid/twitchtok-showcase.git
+git clone git@github.com:JiroDavid/twitchtok-showcase.git
 cd twitchtok-showcase
 ```
 
@@ -81,7 +81,9 @@ source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Create `backend/.env`:
+For **demo mode only**, no `.env` is needed — all settings have safe defaults and the backend starts without one.
+
+For **full pipeline mode**, create `backend/.env`:
 
 ```env
 APP_NAME=TwitchTok API
@@ -89,7 +91,6 @@ DEBUG=true
 HOST=127.0.0.1
 PORT=8000
 
-# Only needed for full pipeline mode:
 TWITCH_CLIENT_ID=your_client_id_here
 TWITCH_CLIENT_SECRET=your_client_secret_here
 TWITCH_REDIRECT_URI=http://localhost:8000/auth/twitch/callback
