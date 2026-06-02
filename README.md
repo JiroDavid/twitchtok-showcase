@@ -1,6 +1,6 @@
 # TwitchTok
 
-Convert landscape Twitch clips into vertical 9:16 short-form videos with AI-generated subtitles, smart crop detection, and social-media metadata — with an interactive demo website for live showcasing.
+Convert landscape Twitch clips into vertical 9:16 short-form videos with AI-generated subtitles, smart crop detection, and social-media metadata. Includes an interactive demo website for live showcasing.
 
 ---
 
@@ -50,8 +50,8 @@ git lfs install
 
 ```bash
 # Pull the required Ollama models after installing Ollama
-ollama pull llava-llama3:8b   # vision — crop detection
-ollama pull llama3.1:8b       # text — titles, hashtags, refinement
+ollama pull llava-llama3:8b   # vision: crop detection
+ollama pull llama3.1:8b       # text: titles, hashtags, refinement
 ```
 
 ---
@@ -81,7 +81,7 @@ source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-For **demo mode only**, no `.env` is needed — all settings have safe defaults and the backend starts without one.
+For **demo mode only**, no `.env` is needed. All settings have safe defaults and the backend starts without one.
 
 For **full pipeline mode**, create `backend/.env`:
 
@@ -109,15 +109,15 @@ npm install
 ## Running
 
 ```bash
-# Terminal 1 — backend
+# Terminal 1: backend
 cd backend && source .venv/bin/activate
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
-# Terminal 2 — frontend
+# Terminal 2: frontend
 cd frontend && npm run dev
 ```
 
-Open **http://localhost:3000** — the demo landing page loads by default.
+Open **http://localhost:3000** - the demo landing page loads by default.
 
 For the full pipeline, navigate to **http://localhost:3000/app**.
 
@@ -127,17 +127,17 @@ For the full pipeline, navigate to **http://localhost:3000/app**.
 
 The demo at `/` walks through 4 steps with auto-scroll:
 
-1. **Pick a clip** — 3 pre-loaded Twitch highlights, hover to preview with audio
-2. **Customise** — choose font, caption colour, and layout (Cropped / Fullscreen / Stacked). Each clip has a recommended layout badge.
-3. **Processing** — animated AI step messages run while FFmpeg burns the captions in live. Holds on "Finishing up..." until the render actually completes.
-4. **Reveal** — the finished captioned vertical clip plays in a phone frame. AI-generated TikTok title, description, and hashtags appear below.
+1. **Pick a clip** - 3 pre-loaded Twitch highlights, hover to preview with audio
+2. **Customise** - choose font, caption colour, and layout (Cropped / Fullscreen / Stacked). Each clip has a recommended layout badge.
+3. **Processing** - animated AI step messages run while FFmpeg burns the captions in live. Holds on "Finishing up..." until the render actually completes.
+4. **Reveal** - the finished captioned vertical clip plays in a phone frame. AI-generated TikTok title, description, and hashtags appear below.
 
 ### Pre-loaded clips
 
 | # | Clip | Recommended layout |
 |---|------|-------------------|
 | 1 | Ludwig crashing out after losing a League of Legends tournament | Stacked |
-| 2 | JasonTheWeen + Maya — Maya hands Jason a toad from her animal sanctuary | Cropped |
+| 2 | JasonTheWeen + Maya - Maya hands Jason a toad from her animal sanctuary | Cropped |
 | 3 | Stable Ronaldo interviews Cyr (as Zorg) + Peach (as Leeloo Dallas) at the Streamer Awards | Fullscreen |
 
 ### Caption colours
@@ -163,9 +163,9 @@ twitchtok-showcase/
 │   │   └── services/
 │   │       ├── transcription.py        # Whisper + ASS/SRT generation
 │   │       ├── video.py                # FFmpeg video processing
-│   │       ├── layout_analysis.py      # Ollama vision — crop detection
-│   │       ├── metadata_generation.py  # Ollama LLM — titles/hashtags
-│   │       └── caption_refinement.py   # Ollama LLM — subtitle cleanup
+│   │       ├── layout_analysis.py      # Ollama vision: crop detection
+│   │       ├── metadata_generation.py  # Ollama LLM: titles/hashtags
+│   │       └── caption_refinement.py   # Ollama LLM: subtitle cleanup
 │   ├── storage/
 │   │   ├── downloads/                  # clip{1,2,3}_cut.mp4 (LFS-tracked)
 │   │   └── outputs/                    # Job outputs (gitignored)
@@ -183,10 +183,10 @@ twitchtok-showcase/
         ├── app/page.tsx                # Full pipeline UI
         ├── utils.ts                    # applyConfigToCaptions (per-speaker colour logic)
         └── components/demo/
-            ├── ClipPicker.tsx          # Step 1 — clip selection with audio preview
-            ├── StyleConfigurator.tsx   # Step 2 — font, colour, layout
-            ├── ProcessingWindow.tsx    # Step 3 — animated progress, waits for real render
-            ├── RevealPanel.tsx         # Step 4 — output video + AI metadata
+            ├── ClipPicker.tsx          # Step 1: clip selection with audio preview
+            ├── StyleConfigurator.tsx   # Step 2: font, colour, layout
+            ├── ProcessingWindow.tsx    # Step 3: animated progress, waits for real render
+            ├── RevealPanel.tsx         # Step 4: output video + AI metadata
             └── MiniPhonePreview.tsx    # Live phone preview during configuration
 ```
 
