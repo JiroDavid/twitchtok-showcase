@@ -1,6 +1,7 @@
 import json
 import shutil
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
@@ -15,10 +16,11 @@ from app.routes.jobs import (
 
 router = APIRouter(prefix="/demo-cache", tags=["demo"])
 
-# Resolve paths relative to this file: routes/demo.py → app → backend → repo_root
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _DEMO_CACHE_DIR = _REPO_ROOT / "frontend" / "public" / "demo_cache"
 _DOWNLOADS_DIR = _REPO_ROOT / "backend" / "storage" / "downloads"
+
+LayoutLiteral = Literal["stacked", "fullscreen", "cropped"]
 
 
 def _demo_clip_dir(clip_index: int) -> Path:
@@ -27,11 +29,13 @@ def _demo_clip_dir(clip_index: int) -> Path:
 
 class PromoteRequest(BaseModel):
     job_id: str
+    layout: LayoutLiteral = "stacked"
 
 
 class SubtitleRerenderDemoRequest(BaseModel):
     clip_index: int
     items: list[EditableCaptionItem]
+    layout: LayoutLiteral = "stacked"
 
 
 class CropRerenderDemoRequest(BaseModel):
@@ -55,17 +59,20 @@ def promote_to_demo_cache(clip_index: int, payload: PromoteRequest):
     dest = _demo_clip_dir(clip_index)
     dest.mkdir(parents=True, exist_ok=True)
 
+    # Save layout-specific base video (no captions)
+    if base_path := result.get("base_output_path"):
+        shutil.copy2(base_path, dest / f"base_{payload.layout}.mp4")
+
+    # Save current output (captions burned in, if applicable) — generic fallback
     if output_path := result.get("output_path"):
         shutil.copy2(output_path, dest / "output.mp4")
 
-    if base_path := result.get("base_output_path"):
-        shutil.copy2(base_path, dest / "base.mp4")
-
+    # Save captions.json once (shared across layouts — same transcription)
     captions = result.get("captions") or {}
     if json_path := captions.get("captions_json_path"):
         shutil.copy2(json_path, dest / "captions.json")
 
-    return {"status": "ok", "clip_index": clip_index}
+    return {"status": "ok", "clip_index": clip_index, "layout": payload.layout}
 
 
 @router.post("/subtitle-rerender")
@@ -73,13 +80,17 @@ def create_demo_subtitle_rerender(
     payload: SubtitleRerenderDemoRequest,
     background_tasks: BackgroundTasks,
 ):
-    """Re-burn subtitles onto base.mp4 for the given demo clip."""
+    """Re-burn subtitles onto the layout-specific base video."""
     clip_dir = _demo_clip_dir(payload.clip_index)
-    base_path = clip_dir / "base.mp4"
+
+    # Prefer layout-specific base, fall back to generic base.mp4
+    base_path = clip_dir / f"base_{payload.layout}.mp4"
+    if not base_path.exists():
+        base_path = clip_dir / "base.mp4"
     if not base_path.exists():
         raise HTTPException(
             status_code=404,
-            detail=f"base.mp4 not found for clip {payload.clip_index + 1}. Run initial pipeline first.",
+            detail=f"No base video found for clip {payload.clip_index + 1} layout '{payload.layout}'. Run initial pipeline first.",
         )
 
     captions_json = clip_dir / "captions.json"
@@ -117,7 +128,6 @@ def create_demo_crop_rerender(
             detail=f"clip{payload.clip_index + 1}_cut.mp4 not found in downloads. Copy it first.",
         )
 
-    # Generate ASS from existing captions so the new crop also gets subtitles
     captions_json = _demo_clip_dir(payload.clip_index) / "captions.json"
     captions_ass_path: str | None = None
     if captions_json.exists():

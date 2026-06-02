@@ -34,6 +34,7 @@ from app.services.transcription import (
 )
 from app.services.twitch_api import download_twitch_clip, extract_clip_slug
 from app.services.video import (
+    OUTPUTS_DIR,
     burn_subtitles_into_video,
     extract_representative_frame,
     process_video_to_vertical,
@@ -355,27 +356,25 @@ def process_subtitle_rerender_job(
                 raise FileNotFoundError(f"Captions JSON not found: {captions_json_path}")
             captions_payload = load_captions_json(captions_json_path)
             updated_payload = update_captions_payload_with_edits(captions_payload, items)
-            saved_json_result = save_captions_json(captions_json_path, updated_payload)
             json_stem = captions_json_file.stem
         else:
-            fresh_payload = {"captions": items}
-            fresh_json_filename = f"{input_video.stem}_manual_{short_job_id}.json"
-            updated_payload = fresh_payload
-            saved_json_result = save_captions_json(
-                f"/tmp/{fresh_json_filename}", updated_payload
-            )
-            captions_json_path = saved_json_result["captions_json_path"]
-            json_stem = Path(captions_json_path).stem
+            updated_payload = {"captions": items}
+            json_stem = input_video.stem
+
+        # Write updated captions to OUTPUTS_DIR — never overwrite the source captions.json,
+        # which the frontend reads directly as a plain array.
+        working_json_path = str(OUTPUTS_DIR / f"{json_stem}_edited_{short_job_id}.json")
+        saved_json_result = save_captions_json(working_json_path, updated_payload)
 
         srt_filename = f"{json_stem}_edited_{short_job_id}.srt"
         srt_result = write_srt_from_captions_json(
-            captions_json_path=captions_json_path,
+            captions_json_path=working_json_path,
             output_filename=srt_filename,
         )
 
         ass_filename = f"{json_stem}_edited_{short_job_id}.ass"
         ass_result = write_ass_from_captions_json(
-            captions_json_path=captions_json_path,
+            captions_json_path=working_json_path,
             output_filename=ass_filename,
         )
 

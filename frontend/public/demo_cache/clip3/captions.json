@@ -1,25 +1,1825 @@
-[
-  {
-    "id": 1,
-    "start": 0.0,
-    "end": 3.0,
-    "final_text": "Caption placeholder",
-    "style": {
-      "color": "#FFFFFF",
-      "font_family": "Montserrat",
-      "font_size": 140,
-      "outline": 8,
-      "shadow": 3
+{
+  "captions": [
+    {
+      "id": 1,
+      "start": 0.1,
+      "end": 0.47,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Oh man-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
     },
-    "placement": {
-      "track": "bottom",
-      "x": null,
-      "y": null,
-      "align": "bottom"
+    {
+      "id": 2,
+      "start": 0.47,
+      "end": 1.4,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "this is part 2.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
     },
-    "raw_text": "",
-    "refined_text": "",
-    "status": "draft",
-    "is_manual": true
-  }
-]
+    {
+      "id": 3,
+      "start": 1.4,
+      "end": 2.23,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Here we go-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 4,
+      "start": 2.23,
+      "end": 2.93,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "well okay.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 5,
+      "start": 2.93,
+      "end": 4.07,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "So she's looking",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 6,
+      "start": 4.07,
+      "end": 4.87,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Okay alright-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 7,
+      "start": 4.87,
+      "end": 5.8,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "So talk to the people",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 8,
+      "start": 5.8,
+      "end": 7.2,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "talk to the people-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 9,
+      "start": 7.2,
+      "end": 8.23,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "who you are",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 10,
+      "start": 8.23,
+      "end": 8.8,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "and what-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 11,
+      "start": 8.8,
+      "end": 9.77,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "what's the outfit",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 12,
+      "start": 9.77,
+      "end": 10.37,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "this year?",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 13,
+      "start": 10.37,
+      "end": 11.07,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I'll tell you what",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 14,
+      "start": 11.07,
+      "end": 11.7,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "she don't speak",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 15,
+      "start": 11.7,
+      "end": 12.2,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "much English",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 16,
+      "start": 12.2,
+      "end": 12.93,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "she speaks ancient",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 17,
+      "start": 12.93,
+      "end": 13.4,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "so I'll let",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 18,
+      "start": 13.4,
+      "end": 13.77,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "you know",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 19,
+      "start": 13.77,
+      "end": 13.97,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "that much",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 20,
+      "start": 13.97,
+      "end": 14.67,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "oh okay",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 21,
+      "start": 14.67,
+      "end": 15.17,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Did you say-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 22,
+      "start": 15.17,
+      "end": 15.97,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "her name is Leeloo",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 23,
+      "start": 15.97,
+      "end": 16.87,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "say your name",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 24,
+      "start": 16.87,
+      "end": 18.4,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Leeloo Dallas Multipass",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF69B4",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 25,
+      "start": 18.4,
+      "end": 18.97,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "now she's looking",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 26,
+      "start": 18.97,
+      "end": 19.2,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "at me",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 27,
+      "start": 19.2,
+      "end": 19.63,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I'm a little",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 28,
+      "start": 19.63,
+      "end": 19.93,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "intimid-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 29,
+      "start": 19.93,
+      "end": 20.53,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "do you feel like",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 30,
+      "start": 20.53,
+      "end": 21.23,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "that's happening",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 31,
+      "start": 21.23,
+      "end": 21.87,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "again right now",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 32,
+      "start": 21.87,
+      "end": 22.03,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Um-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 33,
+      "start": 22.03,
+      "end": 22.57,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "A little bit",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 34,
+      "start": 22.57,
+      "end": 22.93,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "what I- I-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 35,
+      "start": 22.93,
+      "end": 23.47,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I don't know",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 36,
+      "start": 23.47,
+      "end": 24.2,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "what's going on",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 37,
+      "start": 24.2,
+      "end": 24.67,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "what is this",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 38,
+      "start": 24.67,
+      "end": 25.4,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "where's your arm",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 39,
+      "start": 25.4,
+      "end": 26.33,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I'm glad you asked uh",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 40,
+      "start": 26.33,
+      "end": 28.37,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "the- the- ZF1",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 41,
+      "start": 28.37,
+      "end": 29.2,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "light handle",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 42,
+      "start": 29.2,
+      "end": 30.63,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "adjustable",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 43,
+      "start": 30.63,
+      "end": 30.9,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "uh",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 44,
+      "start": 30.9,
+      "end": 31.73,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "great for lefties",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 45,
+      "start": 31.73,
+      "end": 32.3,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "and righties",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 46,
+      "start": 32.3,
+      "end": 32.5,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "okay",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 47,
+      "start": 32.5,
+      "end": 33.17,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "uh laser drag",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 48,
+      "start": 33.17,
+      "end": 33.73,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "with optics",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 49,
+      "start": 33.73,
+      "end": 34.43,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "and low functional",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 50,
+      "start": 34.43,
+      "end": 35.23,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "decibels per channel",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 51,
+      "start": 35.23,
+      "end": 35.4,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "okay",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 52,
+      "start": 35.4,
+      "end": 36.47,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "like the autotivity",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 53,
+      "start": 36.47,
+      "end": 37.37,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "of matter itself",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 54,
+      "start": 37.73,
+      "end": 38.7,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "cover 1 modification",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 55,
+      "start": 38.7,
+      "end": 39.0,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "state of the art",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 56,
+      "start": 39.0,
+      "end": 39.97,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "hands hold",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 57,
+      "start": 39.97,
+      "end": 41.27,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "tactical scope",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 58,
+      "start": 41.27,
+      "end": 42.17,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I'm a weapons",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 59,
+      "start": 42.17,
+      "end": 42.63,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "manufacturer",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 60,
+      "start": 42.63,
+      "end": 43.07,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "it's what i do-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 61,
+      "start": 43.07,
+      "end": 43.27,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Okay.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 62,
+      "start": 43.27,
+      "end": 43.67,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "um what",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 63,
+      "start": 43.67,
+      "end": 44.2,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "awards are",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 64,
+      "start": 44.2,
+      "end": 45.0,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "you excited for?",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 65,
+      "start": 45.0,
+      "end": 45.9,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Is she okay-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 66,
+      "start": 45.9,
+      "end": 46.27,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "by the way?",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 67,
+      "start": 47.5,
+      "end": 48.63,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Multipass!",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF69B4",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 68,
+      "start": 49.87,
+      "end": 50.93,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "we like this diva",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 69,
+      "start": 50.93,
+      "end": 51.57,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "her name",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 70,
+      "start": 51.57,
+      "end": 52.1,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "is extra",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    }
+  ],
+  "edited": true
+}

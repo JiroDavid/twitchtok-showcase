@@ -20,10 +20,17 @@ const COLOR_OPTIONS: { value: string; label: string }[] = [
 ];
 
 const LAYOUT_OPTIONS: { value: LayoutOption; label: string; description: string }[] = [
-  { value: "cropped",    label: "Cropped",    description: "Center crop to 9:16" },
-  { value: "fullscreen", label: "Fullscreen", description: "Blurred background" },
+  { value: "cropped",    label: "Cropped",    description: "Blurred background" },
+  { value: "fullscreen", label: "Fullscreen", description: "Black background" },
   { value: "stacked",    label: "Stacked",    description: "Facecam + gameplay" },
 ];
+
+// Recommended layout per clip (0-indexed)
+const RECOMMENDED_LAYOUT: Record<number, LayoutOption> = {
+  0: "stacked",
+  1: "cropped",
+  2: "fullscreen",
+};
 
 type StyleConfiguratorProps = {
   config: DemoConfig;
@@ -89,20 +96,28 @@ export function StyleConfigurator({
         <div>
           <label className="mb-2 block text-xs text-zinc-500">Layout</label>
           <div className="flex gap-2">
-            {LAYOUT_OPTIONS.map(({ value, label, description }) => (
-              <button
-                key={value}
-                onClick={() => onConfigChange({ ...config, layout: value })}
-                className={`flex-1 rounded-md px-3 py-2 text-left transition-all duration-100 ${
-                  config.layout === value
-                    ? "border border-[#9146FF] bg-[#9146FF]/10 text-zinc-100"
-                    : "border border-zinc-800 bg-zinc-800 text-zinc-400 hover:border-zinc-600"
-                }`}
-              >
-                <p className="text-xs font-semibold">{label}</p>
-                <p className="text-[10px] text-zinc-500">{description}</p>
-              </button>
-            ))}
+            {LAYOUT_OPTIONS.map(({ value, label, description }) => {
+              const isRecommended = selectedClipIndex !== null && RECOMMENDED_LAYOUT[selectedClipIndex] === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() => onConfigChange({ ...config, layout: value })}
+                  className={`relative flex-1 rounded-md px-3 py-2 text-left transition-all duration-100 ${
+                    config.layout === value
+                      ? "border border-[#9146FF] bg-[#9146FF]/10 text-zinc-100"
+                      : "border border-zinc-800 bg-zinc-800 text-zinc-400 hover:border-zinc-600"
+                  }`}
+                >
+                  {isRecommended && (
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[#9146FF] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-md">
+                      ✦ Recommended
+                    </span>
+                  )}
+                  <p className="text-xs font-semibold">{label}</p>
+                  <p className="text-[10px] text-zinc-500">{description}</p>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

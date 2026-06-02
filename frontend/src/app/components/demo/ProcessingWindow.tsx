@@ -10,30 +10,31 @@ const MESSAGES = [
   "Finishing up...",
 ];
 
-// Milliseconds after mount when each message becomes active
 const MESSAGE_DELAYS_MS = [0, 1500, 3500, 5500, 7500];
 
 type ProcessingWindowProps = {
   selectedClipIndex: number;
+  outputUrlPromise?: Promise<string | null>;
   onComplete: (outputUrl: string) => void;
 };
 
 export function ProcessingWindow({
   selectedClipIndex,
+  outputUrlPromise,
   onComplete,
 }: ProcessingWindowProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [doneIndices, setDoneIndices] = useState<Set<number>>(new Set());
 
-  const messagesFinishedRef = useRef(false);
-  const jobOutputUrlRef     = useRef<string | null>(null);
-  const onCompleteRef       = useRef(onComplete);
-  // eslint-disable-next-line react-hooks/refs
+  const jobOutputUrlRef = useRef<string | null>(null);
+  const onCompleteRef   = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
-  // Timed message sequence
+  // Timed message sequence. The last message stays active (spinning) until
+  // the render job resolves — no fixed fallback timer, no URL flash.
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
+    const fallback = `/demo_cache/clip${selectedClipIndex + 1}/output.mp4?t=${Date.now()}`;
 
     MESSAGE_DELAYS_MS.forEach((delay, index) => {
       timers.push(
@@ -44,15 +45,21 @@ export function ProcessingWindow({
           }
 
           if (index === MESSAGES.length - 1) {
-            timers.push(
-              setTimeout(() => {
+            // Poll until the render URL lands (or 25s hard timeout)
+            const deadline = Date.now() + 25_000;
+            const poll = () => {
+              const url = jobOutputUrlRef.current;
+              if (url) {
                 setDoneIndices((prev) => new Set([...prev, index]));
-                messagesFinishedRef.current = true;
-                if (jobOutputUrlRef.current) {
-                  onCompleteRef.current(jobOutputUrlRef.current);
-                }
-              }, 1000),
-            );
+                onCompleteRef.current(url);
+              } else if (Date.now() >= deadline) {
+                setDoneIndices((prev) => new Set([...prev, index]));
+                onCompleteRef.current(fallback);
+              } else {
+                timers.push(setTimeout(poll, 400));
+              }
+            };
+            timers.push(setTimeout(poll, 500));
           }
         }, delay),
       );
@@ -61,14 +68,17 @@ export function ProcessingWindow({
     return () => timers.forEach(clearTimeout);
   }, []);
 
-  // Resolve to pre-cached output — no live render in demo mode
+  // Resolve output URL — just set the ref; the poll loop above picks it up
   useEffect(() => {
-    const cachedUrl = `/demo_cache/clip${selectedClipIndex + 1}/output.mp4`;
-    jobOutputUrlRef.current = cachedUrl;
-    if (messagesFinishedRef.current) {
-      onCompleteRef.current(cachedUrl);
+    const fallback = `/demo_cache/clip${selectedClipIndex + 1}/output.mp4?t=${Date.now()}`;
+    if (outputUrlPromise) {
+      outputUrlPromise
+        .then((url) => { jobOutputUrlRef.current = url ?? fallback; })
+        .catch(() => { jobOutputUrlRef.current = fallback; });
+    } else {
+      jobOutputUrlRef.current = fallback;
     }
-  }, [selectedClipIndex]);
+  }, [selectedClipIndex, outputUrlPromise]);
 
   const progress = (doneIndices.size / MESSAGES.length) * 100;
 

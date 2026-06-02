@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { EditableCaptionDraft, StackedConfig } from "../../types";
+import type { EditableCaptionDraft, LayoutOption, StackedConfig } from "../../types";
 
 async function pollJob(jobId: string): Promise<void> {
   for (;;) {
@@ -14,11 +14,11 @@ async function pollJob(jobId: string): Promise<void> {
   }
 }
 
-async function promoteJob(clipIndex: number, jobId: string): Promise<void> {
+async function promoteJob(clipIndex: number, jobId: string, layout?: LayoutOption): Promise<void> {
   const res = await fetch(`/demo-cache/${clipIndex}/promote`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ job_id: jobId }),
+    body: JSON.stringify({ job_id: jobId, ...(layout ? { layout } : {}) }),
   });
   if (!res.ok) {
     const text = await res.text();
@@ -33,6 +33,7 @@ export function useDemoRerender() {
   async function rerenderSubtitles(
     clipIndex: number,
     captions: EditableCaptionDraft[],
+    layout: LayoutOption = "stacked",
   ): Promise<string | null> {
     setIsProcessing(true);
     setError(null);
@@ -40,7 +41,7 @@ export function useDemoRerender() {
       const res = await fetch("/demo-cache/subtitle-rerender", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clip_index: clipIndex, items: captions }),
+        body: JSON.stringify({ clip_index: clipIndex, items: captions, layout }),
       });
       if (!res.ok) {
         const text = await res.text();
@@ -48,7 +49,7 @@ export function useDemoRerender() {
       }
       const { job_id } = await res.json();
       await pollJob(job_id);
-      await promoteJob(clipIndex, job_id);
+      await promoteJob(clipIndex, job_id, layout);
       return `/demo_cache/clip${clipIndex + 1}/output.mp4?t=${Date.now()}`;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Subtitle re-render failed");

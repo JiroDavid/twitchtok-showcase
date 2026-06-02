@@ -976,6 +976,17 @@ export default function Home() {
     ]);
   }
 
+  function duplicateSubtitleDraft(template: EditableCaptionDraft) {
+    setSubtitleDrafts((current) => {
+      const nextId = current.length > 0 ? Math.max(...current.map((c) => c.id)) + 1 : 1;
+      const duration = template.end - template.start;
+      return [
+        ...current,
+        { ...template, id: nextId, start: template.end, end: template.end + duration },
+      ];
+    });
+  }
+
   function removeSubtitleDraft(id: number) {
     setSubtitleDrafts((current) => current.filter((caption) => caption.id !== id));
   }
@@ -1132,6 +1143,26 @@ export default function Home() {
       ...current,
       split_ratio_top: clamp(value, 0.2, 0.8),
     }));
+  }
+
+  async function saveToDemo(slot: number) {
+    // Use the most recent completed job: crop rerender > subtitle rerender > process
+    const activeJobId = cropRerenderJobId ?? subtitleRerenderJobId ?? processJobId;
+    if (!activeJobId) throw new Error("No completed job to save.");
+
+    const res = await fetch(`/demo-cache/${slot - 1}/promote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        job_id: activeJobId,
+        layout: submittedLayoutRef.current,
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Promote failed: ${text}`);
+    }
   }
 
   useEffect(() => {
@@ -1802,6 +1833,7 @@ export default function Home() {
             onAddSubtitles={openAddSubtitles}
             onOpenCropAdjust={openCropAdjust}
             onOpenSubtitleEditor={openSubtitleEditor}
+            onSaveToDemo={saveToDemo}
             outputVideoUrl={outputVideoUrl}
             pipelineMessage={pipelineMessage}
             pipelineStage={pipelineStage}
@@ -1893,6 +1925,7 @@ export default function Home() {
         isApplying={isApplyingSubtitleEdits}
         isOpen={isSubtitleEditorOpen}
         onAddCaption={addSubtitleDraft}
+        onDuplicateCaption={duplicateSubtitleDraft}
         onApply={applySubtitleEdits}
         onChangeCaption={updateSubtitleDraft}
         onChangeTiming={updateSubtitleTiming}

@@ -84,10 +84,10 @@ def twitch_callback(code: str, first: int = Query(default=10, ge=1, le=20)):
         }
 
         encoded_payload = quote(dumps(payload))
-        redirect_url = f"{FRONTEND_CALLBACK_URL}/?oauth=success&payload={encoded_payload}"
+        redirect_url = f"{FRONTEND_CALLBACK_URL}/app?oauth=success&payload={encoded_payload}"
         return RedirectResponse(redirect_url)
 
     except Exception as exc:
         error_message = quote(str(exc))
-        redirect_url = f"{FRONTEND_CALLBACK_URL}/?oauth=error&message={error_message}"
+        redirect_url = f"{FRONTEND_CALLBACK_URL}/app?oauth=error&message={error_message}"
         return RedirectResponse(redirect_url)

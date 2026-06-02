@@ -26,6 +26,10 @@ const nextConfig: NextConfig = {
         destination: "http://localhost:8000/clips/:path*",
       },
       {
+        source: "/demo-cache/:path*",
+        destination: "http://localhost:8000/demo-cache/:path*",
+      },
+      {
         source: "/health",
         destination: "http://localhost:8000/health",
       },

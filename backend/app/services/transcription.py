@@ -30,7 +30,7 @@ DEFAULT_CAPTION_OUTLINE = 8
 DEFAULT_CAPTION_SHADOW = 3
 
 ASS_SAFE_WIDTH_RATIO = 0.76
-ASS_MAX_LINES = 4
+ASS_MAX_LINES = 1
 ASS_LONG_CAPTION_FONT_SCALE_STEP = 0.88
 ASS_MIN_FONT_SIZE = 56
 ASS_MIN_WRAP_CHARS = 8
@@ -73,8 +73,6 @@ def _format_ass_timestamp(seconds: float) -> str:
 
 def _clean_caption_text(text: str) -> str:
     text = text.strip()
-    text = text.replace("!", "")
-    text = text.replace(",", "")
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
@@ -724,7 +722,10 @@ def save_captions_json(captions_json_path: str, captions_payload: dict) -> dict:
 
 
 def load_captions_json(captions_json_path: str) -> dict:
-    return _read_json_file(Path(captions_json_path))
+    data = _read_json_file(Path(captions_json_path))
+    if isinstance(data, list):
+        return {"captions": data}
+    return data
 
 
 def update_captions_payload_with_edits(
@@ -849,29 +850,29 @@ def transcribe_video_to_srt(
         raise FileNotFoundError(f"Input video not found: {input_path}")
 
     try:
-        import whisper
+        from faster_whisper import WhisperModel
     except ImportError as exc:
         raise RuntimeError(
-            "Whisper is not installed. Install backend dependencies to enable captions."
+            "faster-whisper is not installed. Install backend dependencies to enable captions."
         ) from exc
 
-    import torch
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-        try:
-            model = whisper.load_model(model_name, device="cuda")
-        except torch.cuda.OutOfMemoryError:
-            torch.cuda.empty_cache()
-            model = whisper.load_model(model_name, device="cpu")
-    else:
-        model = whisper.load_model(model_name, device="cpu")
-    transcription = model.transcribe(
-        str(input_file),
-        language="en",
-        word_timestamps=True,
-    )
+    def _load_and_transcribe(device: str, compute_type: str) -> list:
+        m = WhisperModel(model_name, device=device, compute_type=compute_type)
+        raw, _ = m.transcribe(str(input_file), language="en", word_timestamps=True)
+        return [
+            {
+                "start": seg.start,
+                "end": seg.end,
+                "text": seg.text,
+                "words": [{"word": w.word, "start": w.start, "end": w.end} for w in (seg.words or [])],
+            }
+            for seg in raw
+        ]
 
-    segments = transcription.get("segments") or []
+    try:
+        segments = _load_and_transcribe("cuda", "float16")
+    except Exception:
+        segments = _load_and_transcribe("cpu", "int8")
     words = _flatten_word_timestamps(segments)
 
     if words:

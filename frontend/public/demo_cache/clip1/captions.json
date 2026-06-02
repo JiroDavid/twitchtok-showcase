@@ -1,25 +1,1175 @@
-[
-  {
-    "id": 1,
-    "start": 0.0,
-    "end": 3.0,
-    "final_text": "Caption placeholder",
-    "style": {
-      "color": "#FFFFFF",
-      "font_family": "Montserrat",
-      "font_size": 140,
-      "outline": 8,
-      "shadow": 3
+{
+  "captions": [
+    {
+      "id": 1,
+      "start": 1.4,
+      "end": 2.67,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Ughh",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
     },
-    "placement": {
-      "track": "bottom",
-      "x": null,
-      "y": null,
-      "align": "bottom"
+    {
+      "id": 2,
+      "start": 2.67,
+      "end": 3.53,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Ah..",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
     },
-    "raw_text": "",
-    "refined_text": "",
-    "status": "draft",
-    "is_manual": true
-  }
-]
+    {
+      "id": 3,
+      "start": 3.77,
+      "end": 4.33,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I'm not-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 4,
+      "start": 4.33,
+      "end": 4.73,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "good-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 5,
+      "start": 4.73,
+      "end": 5.43,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "enough!",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 6,
+      "start": 5.8,
+      "end": 6.37,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I'm not-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 7,
+      "start": 6.37,
+      "end": 6.77,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "good-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 8,
+      "start": 6.77,
+      "end": 8.33,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "enough!",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 9,
+      "start": 8.67,
+      "end": 9.13,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I can't-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 10,
+      "start": 9.13,
+      "end": 10.0,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "do it!",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 11,
+      "start": 10.33,
+      "end": 10.77,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I don't have-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 12,
+      "start": 10.77,
+      "end": 11.5,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "the mental stack-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 13,
+      "start": 11.5,
+      "end": 12.17,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Warwick.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 14,
+      "start": 12.17,
+      "end": 12.83,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "-Warwick.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 15,
+      "start": 12.83,
+      "end": 13.3,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "To tell",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 16,
+      "start": 13.3,
+      "end": 13.6,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "them-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 17,
+      "start": 13.6,
+      "end": 14.1,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "what to do.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 18,
+      "start": 14.27,
+      "end": 14.67,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "To help-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 19,
+      "start": 14.67,
+      "end": 15.17,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Squeex-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 20,
+      "start": 15.17,
+      "end": 15.47,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "micro.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 21,
+      "start": 15.47,
+      "end": 16.3,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I can't do it",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 22,
+      "start": 16.3,
+      "end": 16.7,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I'm not-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 23,
+      "start": 16.7,
+      "end": 17.97,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "good enough!",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 24,
+      "start": 18.77,
+      "end": 20.73,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I can't do it!",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 25,
+      "start": 21.27,
+      "end": 21.7,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "*beep*",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 26,
+      "start": 21.7,
+      "end": 22.87,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "-miserable.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 27,
+      "start": 22.87,
+      "end": 23.3,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "*beep*",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 28,
+      "start": 23.3,
+      "end": 24.0,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "-miserable",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 29,
+      "start": 24.0,
+      "end": 24.27,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "man.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 30,
+      "start": 24.27,
+      "end": 24.87,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I can't do it",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 31,
+      "start": 24.93,
+      "end": 26.23,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I'm not good enough..",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 32,
+      "start": 26.53,
+      "end": 26.93,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "I'm",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 33,
+      "start": 26.93,
+      "end": 27.37,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Not.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 34,
+      "start": 27.37,
+      "end": 27.77,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Good.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 35,
+      "start": 27.77,
+      "end": 28.33,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "Enough.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FFFFFF",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "bottom",
+        "x": null,
+        "y": null,
+        "align": "bottom"
+      }
+    },
+    {
+      "id": 36,
+      "start": 6.37,
+      "end": 7.4,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "NT guys..",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF69B4",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 37,
+      "start": 7.4,
+      "end": 8.33,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "NT.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF69B4",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 38,
+      "start": 11.5,
+      "end": 12.47,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "It's not over.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 39,
+      "start": 12.47,
+      "end": 13.13,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "We can-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 40,
+      "start": 13.13,
+      "end": 13.8,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "do this..",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 41,
+      "start": 17.2,
+      "end": 17.33,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "It might-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF69B4",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 42,
+      "start": 17.33,
+      "end": 17.73,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "be over.",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF69B4",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 43,
+      "start": 19.23,
+      "end": 19.5,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "No..",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 44,
+      "start": 19.5,
+      "end": 20.2,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "We can still-",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    },
+    {
+      "id": 45,
+      "start": 20.2,
+      "end": 21.03,
+      "raw_text": "",
+      "refined_text": "",
+      "final_text": "do this..",
+      "source": "whisper",
+      "refinement_source": null,
+      "status": "edited",
+      "words": [],
+      "is_manual": true,
+      "style": {
+        "color": "#FF8C00",
+        "font_family": "Montserrat",
+        "font_size": 140,
+        "outline": 8.0,
+        "shadow": 3.0
+      },
+      "placement": {
+        "track": "top",
+        "x": null,
+        "y": null,
+        "align": "top"
+      }
+    }
+  ],
+  "edited": true
+}

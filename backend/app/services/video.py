@@ -114,9 +114,15 @@ def process_video_to_vertical(
     output_path = OUTPUTS_DIR / output_filename
 
     if layout == "cropped":
-        vf = (
-            "crop=in_h*9/16:in_h:(in_w-in_h*9/16)/2:0,"
-            f"scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}"
+        # Video scaled to 70% of frame height (sides cropped), blurred background fills the rest
+        fg_height = int(OUTPUT_HEIGHT * 0.70)
+        fg_height -= fg_height % 2  # ensure even
+        filter_complex = (
+            f"[0:v]scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:force_original_aspect_ratio=increase,"
+            f"crop={OUTPUT_WIDTH}:{OUTPUT_HEIGHT},boxblur=20:10[bg];"
+            f"[0:v]scale=-2:{fg_height},"
+            f"crop={OUTPUT_WIDTH}:{fg_height}[fg];"
+            "[bg][fg]overlay=(W-w)/2:(H-h)/2"
         )
 
         command = [
@@ -124,8 +130,8 @@ def process_video_to_vertical(
             "-y",
             "-i",
             str(input_file),
-            "-vf",
-            vf,
+            "-filter_complex",
+            filter_complex,
             "-c:v",
             "libx264",
             "-preset",
@@ -140,11 +146,9 @@ def process_video_to_vertical(
         ]
 
     elif layout == "fullscreen":
-        filter_complex = (
-            f"[0:v]scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:force_original_aspect_ratio=increase,"
-            f"crop={OUTPUT_WIDTH}:{OUTPUT_HEIGHT},boxblur=20:10[bg];"
-            f"[0:v]scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:force_original_aspect_ratio=decrease[fg];"
-            "[bg][fg]overlay=(W-w)/2:(H-h)/2"
+        vf = (
+            f"scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:force_original_aspect_ratio=decrease,"
+            f"pad={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:(ow-iw)/2:(oh-ih)/2:black"
         )
 
         command = [
@@ -152,8 +156,8 @@ def process_video_to_vertical(
             "-y",
             "-i",
             str(input_file),
-            "-filter_complex",
-            filter_complex,
+            "-vf",
+            vf,
             "-c:v",
             "libx264",
             "-preset",

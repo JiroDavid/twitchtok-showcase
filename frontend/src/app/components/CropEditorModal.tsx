@@ -2,7 +2,7 @@
 
 import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
 
-import type { DragMode, DragTarget, StackedConfig, UiMode } from "../types";
+import type { DragMode, DragTarget, LayoutOption, StackedConfig, UiMode } from "../types";
 
 type CropEditorModalProps = {
   aiCropReasoning: string | null;
@@ -14,6 +14,7 @@ type CropEditorModalProps = {
   hideModeBadge: boolean;
   isOpen: boolean;
   isPostRenderMode: boolean;
+  layout?: LayoutOption;
   uiMode: UiMode;
   onClose: () => void;
   onLoadedData: (video: HTMLVideoElement) => void;
@@ -40,6 +41,7 @@ export function CropEditorModal({
   hideModeBadge,
   isOpen,
   isPostRenderMode,
+  layout = "stacked",
   uiMode,
   onClose,
   onLoadedData,
@@ -62,7 +64,7 @@ export function CropEditorModal({
           <div>
             <div className="flex items-center gap-3">
               <h2 className="text-lg font-semibold text-zinc-100">
-                Visual Stacked Crop Editor
+                {layout === "stacked" ? "Stacked Crop Editor" : layout === "fullscreen" ? "Fullscreen Crop Editor" : "Crop Editor"}
               </h2>
               {!hideModeBadge && (
                 <span
@@ -119,39 +121,37 @@ export function CropEditorModal({
               />
 
               <div className="pointer-events-none absolute inset-0">
+                {/* Top crop box — always shown */}
                 <div
                   className="pointer-events-auto absolute border-2 border-violet-400 bg-violet-500/20 shadow-[0_0_0_9999px_rgba(0,0,0,0.15)]"
                   style={topPreviewStyle}
                   onPointerDown={(event) => onStartDrag(event, "top_crop", "move")}
                 >
                   <div className="absolute left-2 top-2 rounded-md bg-violet-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
-                    Top / facecam
+                    {layout === "stacked" ? "Top / facecam" : "Main region"}
                   </div>
                   <div
                     className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize rounded-tl-md bg-violet-400"
-                    onPointerDown={(event) =>
-                      onStartDrag(event, "top_crop", "resize")
-                    }
+                    onPointerDown={(event) => onStartDrag(event, "top_crop", "resize")}
                   />
                 </div>
 
-                <div
-                  className="pointer-events-auto absolute border-2 border-cyan-400 bg-cyan-500/20 shadow-[0_0_0_9999px_rgba(0,0,0,0.08)]"
-                  style={bottomPreviewStyle}
-                  onPointerDown={(event) =>
-                    onStartDrag(event, "bottom_crop", "move")
-                  }
-                >
-                  <div className="absolute left-2 top-2 rounded-md bg-cyan-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
-                    Bottom / gameplay
-                  </div>
+                {/* Bottom crop box — stacked only */}
+                {layout === "stacked" && (
                   <div
-                    className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize rounded-tl-md bg-cyan-400"
-                    onPointerDown={(event) =>
-                      onStartDrag(event, "bottom_crop", "resize")
-                    }
-                  />
-                </div>
+                    className="pointer-events-auto absolute border-2 border-cyan-400 bg-cyan-500/20 shadow-[0_0_0_9999px_rgba(0,0,0,0.08)]"
+                    style={bottomPreviewStyle}
+                    onPointerDown={(event) => onStartDrag(event, "bottom_crop", "move")}
+                  >
+                    <div className="absolute left-2 top-2 rounded-md bg-cyan-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                      Bottom / gameplay
+                    </div>
+                    <div
+                      className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize rounded-tl-md bg-cyan-400"
+                      onPointerDown={(event) => onStartDrag(event, "bottom_crop", "resize")}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -191,36 +191,38 @@ export function CropEditorModal({
               </div>
             )}
 
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-              <h3 className="text-sm font-semibold text-zinc-100">Stack split</h3>
-              <p className="mt-1 text-xs text-zinc-500">
-                Controls the fixed 1080×1920 output split between the top and
-                bottom stacked regions.
-              </p>
+            {layout === "stacked" && (
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                <h3 className="text-sm font-semibold text-zinc-100">Stack split</h3>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Controls the fixed 1080×1920 output split between the top and
+                  bottom stacked regions.
+                </p>
 
-              <div className="mt-4">
-                <input
-                  type="range"
-                  min={20}
-                  max={80}
-                  step={1}
-                  value={Math.round(cropDraft.split_ratio_top * 100)}
-                  onChange={(event) =>
-                    onUpdateSplitRatio(Number(event.target.value) / 100)
-                  }
-                  className="w-full"
-                />
-                <div className="mt-2 flex items-center justify-between text-sm text-zinc-300">
-                  <span>Top: {Math.round(cropDraft.split_ratio_top * 100)}%</span>
-                  <span>
-                    Bottom: {100 - Math.round(cropDraft.split_ratio_top * 100)}%
-                  </span>
+                <div className="mt-4">
+                  <input
+                    type="range"
+                    min={20}
+                    max={80}
+                    step={1}
+                    value={Math.round(cropDraft.split_ratio_top * 100)}
+                    onChange={(event) =>
+                      onUpdateSplitRatio(Number(event.target.value) / 100)
+                    }
+                    className="w-full"
+                  />
+                  <div className="mt-2 flex items-center justify-between text-sm text-zinc-300">
+                    <span>Top: {Math.round(cropDraft.split_ratio_top * 100)}%</span>
+                    <span>
+                      Bottom: {100 - Math.round(cropDraft.split_ratio_top * 100)}%
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-              <h3 className="text-sm font-semibold text-zinc-100">Top crop</h3>
+              <h3 className="text-sm font-semibold text-zinc-100">{layout === "stacked" ? "Top crop" : "Main region"}</h3>
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-wide text-zinc-500">
@@ -249,6 +251,7 @@ export function CropEditorModal({
               </div>
             </div>
 
+            {layout === "stacked" && (
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
               <h3 className="text-sm font-semibold text-zinc-100">Bottom crop</h3>
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
@@ -278,16 +281,24 @@ export function CropEditorModal({
                 </div>
               </div>
             </div>
+            )}
 
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 text-xs leading-6 text-zinc-400">
-              Purple crop fills the top stacked region.
-              <br />
-              Cyan crop fills the bottom stacked region.
-              <br />
-              Each crop is scaled to fit its destination while preserving aspect
-              ratio.
-              <br />
-              No stretching is applied.
+              {layout === "stacked" ? (
+                <>
+                  Purple crop fills the top stacked region.
+                  <br />
+                  Cyan crop fills the bottom stacked region.
+                  <br />
+                  Each crop is scaled to fit its destination while preserving aspect ratio.
+                </>
+              ) : (
+                <>
+                  Drag the purple box to choose which part of the video is the main focal region.
+                  <br />
+                  The final output is 1080×1920. No stretching is applied.
+                </>
+              )}
             </div>
           </div>
         </div>

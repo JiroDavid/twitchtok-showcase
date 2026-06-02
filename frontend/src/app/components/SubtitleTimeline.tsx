@@ -9,8 +9,10 @@ type DragState = {
   mode: "move" | "resize-start" | "resize-end" | "seek";
   captionId: number | null;
   startClientX: number;
+  startClientY: number;
   originalStart: number;
   originalEnd: number;
+  originalTrack: "top" | "bottom" | "free";
 };
 
 type SubtitleTimelineProps = {
@@ -23,6 +25,7 @@ type SubtitleTimelineProps = {
   selectedId: number | null;
   snapInterval: number;
   onChange: (id: number, start: number, end: number) => void;
+  onChangeTrack?: (id: number, track: "top" | "bottom") => void;
   onSeek: (time: number) => void;
   onSelect: (id: number) => void;
 };
@@ -53,14 +56,18 @@ export function SubtitleTimeline({
   selectedId,
   snapInterval,
   onChange,
+  onChangeTrack,
   onSeek,
   onSelect,
 }: SubtitleTimelineProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  const rafRef = useRef<number | null>(null);
   const [zoom, setZoom] = useState(1);
   const [scrollPx, setScrollPx] = useState(0);
   const [containerWidth, setContainerWidth] = useState(600);
+  // track being hovered during a cross-track drag
+  const [dragOverTrack, setDragOverTrack] = useState<"top" | "bottom" | null>(null);
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -74,7 +81,6 @@ export function SubtitleTimeline({
   }, []);
 
   const stateRef = useRef({ captions, duration, snapInterval, onChange, onSeek, zoom, scrollPx });
-  // eslint-disable-next-line react-hooks/refs
   stateRef.current = { captions, duration, snapInterval, onChange, onSeek, zoom, scrollPx };
 
   const clientXToTime = useCallback((clientX: number): number => {
@@ -85,7 +91,19 @@ export function SubtitleTimeline({
     const { duration: d, zoom: z, scrollPx: sp } = stateRef.current;
     const tw = el.clientWidth * z;
     return clamp(((relPx + sp) / tw) * d, 0, d);
-  }, []); // stateRef always has current values, no deps needed
+  }, []);
+
+  // Compute which track a clientY falls into (null = ruler)
+  const trackH = Math.max(24, Math.floor((height - 24) / 2));
+  const clientYToTrack = useCallback((clientY: number): "top" | "bottom" | null => {
+    const el = containerRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const relY = clientY - rect.top;
+    if (relY < 24) return null; // ruler
+    if (relY < 24 + trackH) return "top";
+    return "bottom";
+  }, [trackH]);
 
   useEffect(() => {
     if (disabled) return;
@@ -93,45 +111,62 @@ export function SubtitleTimeline({
     function handlePointerMove(e: PointerEvent) {
       const drag = dragRef.current;
       if (!drag) return;
-      const { duration: dur, snapInterval: snap, onSeek: seekFn, onChange: changeFn, zoom: z } = stateRef.current;
-      if (dur <= 0) return;
 
-      const el = containerRef.current;
-      if (!el) return;
-      const tWidth = el.clientWidth * z;
-      const dt = ((e.clientX - drag.startClientX) / tWidth) * dur;
+      // Batch via RAF to avoid flooding React with re-renders every mousemove
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        const currentDrag = dragRef.current;
+        if (!currentDrag) return;
+        const { duration: dur, snapInterval: snap, onSeek: seekFn, onChange: changeFn, zoom: z } = stateRef.current;
+        if (dur <= 0) return;
 
-      if (drag.mode === "seek") {
-        seekFn(clamp(snapTo(clientXToTime(e.clientX), snap), 0, dur));
-        return;
-      }
+        const el = containerRef.current;
+        if (!el) return;
+        const tWidth = el.clientWidth * z;
+        const dt = ((e.clientX - currentDrag.startClientX) / tWidth) * dur;
 
-      const id = drag.captionId;
-      if (id === null) return;
+        if (currentDrag.mode === "seek") {
+          seekFn(clamp(snapTo(clientXToTime(e.clientX), snap), 0, dur));
+          return;
+        }
 
-      if (drag.mode === "move") {
-        const len = drag.originalEnd - drag.originalStart;
-        const newStart = clamp(snapTo(drag.originalStart + dt, snap), 0, dur - len);
-        changeFn(id, newStart, newStart + len);
-      } else if (drag.mode === "resize-start") {
-        const newStart = clamp(
-          snapTo(drag.originalStart + dt, snap),
-          0,
-          drag.originalEnd - MIN_CAPTION_DURATION
-        );
-        changeFn(id, newStart, drag.originalEnd);
-      } else if (drag.mode === "resize-end") {
-        const newEnd = clamp(
-          snapTo(drag.originalEnd + dt, snap),
-          drag.originalStart + MIN_CAPTION_DURATION,
-          dur
-        );
-        changeFn(id, drag.originalStart, newEnd);
-      }
+        const id = currentDrag.captionId;
+        if (id === null) return;
+
+        if (currentDrag.mode === "move") {
+          const len = currentDrag.originalEnd - currentDrag.originalStart;
+          const newStart = clamp(snapTo(currentDrag.originalStart + dt, snap), 0, dur - len);
+          changeFn(id, newStart, newStart + len);
+        } else if (currentDrag.mode === "resize-start") {
+          const newStart = clamp(snapTo(currentDrag.originalStart + dt, snap), 0, currentDrag.originalEnd - MIN_CAPTION_DURATION);
+          changeFn(id, newStart, currentDrag.originalEnd);
+        } else if (currentDrag.mode === "resize-end") {
+          const newEnd = clamp(snapTo(currentDrag.originalEnd + dt, snap), currentDrag.originalStart + MIN_CAPTION_DURATION, dur);
+          changeFn(id, currentDrag.originalStart, newEnd);
+        }
+
+        if (currentDrag.mode === "move" && onChangeTrack) {
+          const dy = Math.abs(e.clientY - currentDrag.startClientY);
+          if (dy > 12) setDragOverTrack(clientYToTrack(e.clientY));
+        }
+      });
     }
 
-    function handlePointerUp() {
+    function handlePointerUp(e: PointerEvent) {
+      if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      const drag = dragRef.current;
+      if (drag && drag.mode === "move" && drag.captionId !== null && onChangeTrack) {
+        const dy = Math.abs(e.clientY - drag.startClientY);
+        if (dy > 20) {
+          const destTrack = clientYToTrack(e.clientY);
+          if (destTrack && destTrack !== drag.originalTrack) {
+            onChangeTrack(drag.captionId, destTrack);
+          }
+        }
+      }
       dragRef.current = null;
+      setDragOverTrack(null);
     }
 
     window.addEventListener("pointermove", handlePointerMove);
@@ -140,7 +175,7 @@ export function SubtitleTimeline({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [disabled, clientXToTime]);
+  }, [disabled, clientXToTime, clientYToTrack, onChangeTrack]);
 
   function totalWidth(): number {
     return containerWidth * zoom;
@@ -151,22 +186,38 @@ export function SubtitleTimeline({
     return (t / duration) * totalWidth() - scrollPx;
   }
 
-  function handleWheel(e: React.WheelEvent) {
-    e.preventDefault();
-    if (e.ctrlKey || e.metaKey) {
-      const delta = e.deltaY > 0 ? -0.25 : 0.25;
-      setZoom((z) => Math.max(1, Math.min(10, z + delta)));
-    } else {
-      const panDelta = e.deltaX !== 0 ? e.deltaX : e.deltaY * 0.5;
-      setScrollPx((sp) => {
-        const el = containerRef.current;
-        const maxScroll = el ? Math.max(0, el.clientWidth * (zoom - 1)) : 0;
-        return Math.max(0, Math.min(maxScroll, sp + panDelta));
-      });
-    }
-  }
+  // Native non-passive wheel handler — vertical scroll = zoom, horizontal/shift = pan
+  // (No Ctrl needed since body scroll is locked when modal is open)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-  function startSeekDrag(clientX: number) {
+    function handleWheel(e: WheelEvent) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.shiftKey || e.deltaX !== 0) {
+        // Shift+scroll or trackpad horizontal = pan
+        const panDelta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+        setScrollPx((sp) => {
+          const maxScroll = Math.max(0, (el?.clientWidth ?? 0) * (zoom - 1));
+          return Math.max(0, Math.min(maxScroll, sp + panDelta));
+        });
+      } else {
+        // Plain vertical scroll = zoom
+        const delta = e.deltaY > 0 ? -0.3 : 0.3;
+        setZoom((z) => {
+          const next = Math.max(1, Math.min(10, z + delta));
+          if (next === 1) setScrollPx(0);
+          return next;
+        });
+      }
+    }
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [zoom, duration]);
+
+  function startSeekDrag(clientX: number, clientY: number) {
     if (disabled || duration <= 0) return;
     const t = clamp(snapTo(clientXToTime(clientX), stateRef.current.snapInterval), 0, duration);
     onSeek(t);
@@ -174,8 +225,10 @@ export function SubtitleTimeline({
       mode: "seek",
       captionId: null,
       startClientX: clientX,
+      startClientY: clientY,
       originalStart: 0,
       originalEnd: 0,
+      originalTrack: "top",
     };
   }
 
@@ -187,12 +240,15 @@ export function SubtitleTimeline({
     e.stopPropagation();
     if (disabled) return;
     onSelect(caption.id);
+    const track = caption.placement.track === "bottom" ? "bottom" : "top";
     dragRef.current = {
       mode,
       captionId: caption.id,
       startClientX: e.clientX,
+      startClientY: e.clientY,
       originalStart: caption.start,
       originalEnd: caption.end,
+      originalTrack: track,
     };
   }
 
@@ -245,8 +301,7 @@ export function SubtitleTimeline({
     );
   }
 
-  const tickStep =
-    duration <= 15 ? 1 : duration <= 60 ? 5 : duration <= 180 ? 10 : 30;
+  const tickStep = duration <= 15 ? 1 : duration <= 60 ? 5 : duration <= 180 ? 10 : 30;
   const ticks: number[] = [];
   for (let t = 0; t <= Math.ceil(duration); t += tickStep) {
     if (t <= duration) ticks.push(t);
@@ -263,41 +318,22 @@ export function SubtitleTimeline({
     );
   }
 
-  const trackH = Math.max(24, Math.floor((height - 24) / 2));
-
   return (
     <div
       ref={containerRef}
       className={`relative w-full select-none overflow-hidden bg-zinc-950 ${disabled ? "pointer-events-none opacity-50" : ""}`}
       style={{ height }}
-      onWheel={handleWheel}
     >
-      {/* Zoom controls */}
-      <div className="absolute right-2 top-1 z-20 flex items-center gap-1">
-        <button
-          type="button"
-          className="rounded px-1.5 py-0.5 text-[10px] text-zinc-500 hover:text-zinc-300 bg-zinc-900 border border-zinc-800"
-          onClick={() => {
-            setZoom((z) => {
-              const next = Math.max(1, z - 0.5);
-              if (next === 1) setScrollPx(0);
-              return next;
-            });
-          }}
-        >−</button>
-        <span className="text-[10px] text-zinc-600 font-mono">{zoom.toFixed(1)}×</span>
-        <button
-          type="button"
-          className="rounded px-1.5 py-0.5 text-[10px] text-zinc-500 hover:text-zinc-300 bg-zinc-900 border border-zinc-800"
-          onClick={() => setZoom((z) => Math.min(10, z + 0.5))}
-        >+</button>
+      {/* Zoom hint */}
+      <div className="absolute right-2 top-1 z-20 text-[9px] text-zinc-700 pointer-events-none">
+        ctrl+scroll to zoom · scroll to pan
       </div>
 
       {/* Ruler */}
       <div
         className="relative border-b border-zinc-800 bg-zinc-900/60 cursor-crosshair overflow-hidden"
         style={{ height: 24 }}
-        onPointerDown={(e) => startSeekDrag(e.clientX)}
+        onPointerDown={(e) => startSeekDrag(e.clientX, e.clientY)}
       >
         {ticks.map((t) => (
           <div
@@ -306,9 +342,7 @@ export function SubtitleTimeline({
             style={{ left: timeToPx(t), transform: "translateX(-50%)" }}
           >
             <div className="h-2 w-px bg-zinc-600" />
-            <span className="text-[9px] text-zinc-500 leading-none mt-px">
-              {formatRulerTime(t)}
-            </span>
+            <span className="text-[9px] text-zinc-500 leading-none mt-px">{formatRulerTime(t)}</span>
           </div>
         ))}
         <div className="absolute top-0 z-20 pointer-events-none" style={{ left: timeToPx(currentTime), transform: "translateX(-50%)" }}>
@@ -319,9 +353,11 @@ export function SubtitleTimeline({
 
       {/* Top track */}
       <div
-        className="relative border-b border-zinc-800/60 cursor-crosshair overflow-hidden"
+        className={`relative border-b border-zinc-800/60 cursor-crosshair overflow-hidden transition-colors ${
+          dragOverTrack === "top" ? "bg-violet-950/40" : ""
+        }`}
         style={{ height: trackH }}
-        onPointerDown={(e) => startSeekDrag(e.clientX)}
+        onPointerDown={(e) => startSeekDrag(e.clientX, e.clientY)}
       >
         <span className="absolute left-1.5 top-0.5 text-[8px] font-medium uppercase tracking-wider text-zinc-700 pointer-events-none z-10">
           Top / Free
@@ -331,16 +367,7 @@ export function SubtitleTimeline({
             {audioPeaks.map((peak, i) => {
               const x = (i / audioPeaks.length) * totalWidth() - scrollPx;
               const barH = peak * trackH;
-              return (
-                <rect
-                  key={i}
-                  x={x}
-                  y={(trackH - barH) / 2}
-                  width={Math.max(1, totalWidth() / audioPeaks.length - 1)}
-                  height={barH}
-                  fill="#9146ff"
-                />
-              );
+              return <rect key={i} x={x} y={(trackH - barH) / 2} width={Math.max(1, totalWidth() / audioPeaks.length - 1)} height={barH} fill="#9146ff" />;
             })}
           </svg>
         )}
@@ -350,9 +377,11 @@ export function SubtitleTimeline({
 
       {/* Bottom track */}
       <div
-        className="relative cursor-crosshair overflow-hidden"
+        className={`relative cursor-crosshair overflow-hidden transition-colors ${
+          dragOverTrack === "bottom" ? "bg-amber-950/40" : ""
+        }`}
         style={{ height: trackH }}
-        onPointerDown={(e) => startSeekDrag(e.clientX)}
+        onPointerDown={(e) => startSeekDrag(e.clientX, e.clientY)}
       >
         <span className="absolute left-1.5 top-0.5 text-[8px] font-medium uppercase tracking-wider text-zinc-700 pointer-events-none z-10">
           Bottom
@@ -362,16 +391,7 @@ export function SubtitleTimeline({
             {audioPeaks.map((peak, i) => {
               const x = (i / audioPeaks.length) * totalWidth() - scrollPx;
               const barH = peak * trackH;
-              return (
-                <rect
-                  key={i}
-                  x={x}
-                  y={(trackH - barH) / 2}
-                  width={Math.max(1, totalWidth() / audioPeaks.length - 1)}
-                  height={barH}
-                  fill="#9146ff"
-                />
-              );
+              return <rect key={i} x={x} y={(trackH - barH) / 2} width={Math.max(1, totalWidth() / audioPeaks.length - 1)} height={barH} fill="#9146ff" />;
             })}
           </svg>
         )}

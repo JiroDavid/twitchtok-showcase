@@ -76,6 +76,7 @@ type OutputPreviewPanelProps = {
   onAddSubtitles: () => void;
   onOpenCropAdjust: () => void;
   onOpenSubtitleEditor: () => void;
+  onSaveToDemo?: (slot: number) => Promise<void>;
   outputVideoUrl: string | null;
   pipelineMessage: string;
   pipelineStage: PipelineStage;
@@ -117,6 +118,7 @@ export function OutputPreviewPanel({
   onAddSubtitles,
   onOpenCropAdjust,
   onOpenSubtitleEditor,
+  onSaveToDemo,
   outputVideoUrl,
   pipelineMessage,
   pipelineStage,
@@ -126,6 +128,22 @@ export function OutputPreviewPanel({
   uiMode,
 }: OutputPreviewPanelProps) {
   const [outputVideoDuration, setOutputVideoDuration] = useState<number | null>(null);
+  const [demoPickerOpen, setDemoPickerOpen] = useState(false);
+  const [demoSaving, setDemoSaving] = useState(false);
+  const [demoSavedSlot, setDemoSavedSlot] = useState<number | null>(null);
+
+  async function handleSaveToDemo(slot: number) {
+    if (!onSaveToDemo) return;
+    setDemoSaving(true);
+    try {
+      await onSaveToDemo(slot);
+      setDemoSavedSlot(slot);
+      setDemoPickerOpen(false);
+      setTimeout(() => setDemoSavedSlot(null), 3000);
+    } finally {
+      setDemoSaving(false);
+    }
+  }
 
   const isCompleted = pipelineStage === "completed";
   const isAiMode = uiMode === "ai";
@@ -192,6 +210,45 @@ export function OutputPreviewPanel({
             >
               Adjust Crop
             </button>
+          )}
+          {isCompleted && onSaveToDemo && (
+            <div className="flex items-center gap-2">
+              {demoSavedSlot !== null ? (
+                <span className="rounded-xl border border-green-500/40 bg-green-500/15 px-4 py-2 text-sm font-semibold text-green-300">
+                  ✓ Saved to slot {demoSavedSlot}
+                </span>
+              ) : demoPickerOpen ? (
+                <>
+                  <span className="text-xs text-zinc-500">Save to slot:</span>
+                  {[1, 2, 3].map((slot) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      disabled={demoSaving}
+                      onClick={() => void handleSaveToDemo(slot)}
+                      className="h-8 w-8 rounded-lg border border-zinc-600 bg-zinc-800 text-sm font-bold text-zinc-100 transition hover:border-[#9146FF] hover:bg-[#9146FF]/20 hover:text-white disabled:opacity-50"
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setDemoPickerOpen(false)}
+                    className="text-xs text-zinc-600 hover:text-zinc-400"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setDemoPickerOpen(true)}
+                  className="rounded-xl border border-[#9146FF]/40 bg-[#9146FF]/15 px-4 py-2 text-sm font-semibold text-purple-300 transition hover:border-[#9146FF] hover:bg-[#9146FF]/25"
+                >
+                  📌 Save to Demo
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
