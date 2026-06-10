@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <radialGradient id="pglow" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#9146ff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#9146ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <circle cx="100" cy="100" r="97" fill="#0d0d0d"/>
+  <circle cx="100" cy="100" r="97" fill="url(#pglow)"/>
+  <circle cx="100" cy="100" r="97" fill="none" stroke="#9146ff" stroke-width="2.5"/>
+
+  <!-- Landscape clip (left) -->
+  <rect x="16" y="68" width="70" height="42" rx="5" fill="#1a0a2e" stroke="#9146ff" stroke-width="1.5"/>
+
+  <!-- Waveform bars -->
+  <rect x="22" y="86" width="5" height="16" rx="2" fill="#9146ff" opacity="0.7"/>
+  <rect x="30" y="80" width="5" height="22" rx="2" fill="#7c3aed" opacity="0.8"/>
+  <rect x="38" y="84" width="5" height="18" rx="2" fill="#9146ff" opacity="0.6"/>
+  <rect x="46" y="76" width="5" height="26" rx="2" fill="#a855f7" opacity="0.9"/>
+  <rect x="54" y="82" width="5" height="20" rx="2" fill="#9146ff" opacity="0.7"/>
+  <rect x="62" y="88" width="5" height="14" rx="2" fill="#7c3aed" opacity="0.6"/>
+  <rect x="70" y="78" width="5" height="24" rx="2" fill="#9146ff" opacity="0.8"/>
+
+  <!-- Play icon on clip -->
+  <polygon points="38,82 38,96 50,89" fill="white" opacity="0.8"/>
+
+  <!-- Conversion arrow -->
+  <line x1="92" y1="86" x2="106" y2="86" stroke="#25f4ee" stroke-width="2.5" stroke-linecap="round"/>
+  <polygon points="103,81 114,86 103,91" fill="#25f4ee"/>
+  <line x1="92" y1="96" x2="103" y2="96" stroke="#fe2c55" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Phone frame (right) -->
+  <rect x="116" y="38" width="66" height="116" rx="12" fill="#111" stroke="#9146ff" stroke-width="2"/>
+
+  <!-- Phone screen -->
+  <rect x="122" y="51" width="54" height="90" rx="5" fill="#0d0d0d"/>
+
+  <!-- Video content strips -->
+  <rect x="122" y="51" width="54" height="32" rx="5" fill="#1a0a2e"/>
+  <rect x="122" y="83" width="54" height="29" fill="#0f0020"/>
+  <rect x="122" y="112" width="54" height="29" rx="5" fill="#1a0a2e"/>
+
+  <!-- Caption bar -->
+  <rect x="125" y="126" width="48" height="11" rx="3" fill="#9146ff" opacity="0.75"/>
+  <rect x="128" y="129" width="30" height="4" rx="2" fill="white" opacity="0.5"/>
+
+  <!-- Twitch logo mark -->
+  <rect x="125" y="54" width="12" height="15" rx="2" fill="#9146ff"/>
+  <rect x="128" y="57" width="2" height="6" fill="white"/>
+  <rect x="133" y="57" width="2" height="6" fill="white"/>
+
+  <!-- Play button -->
+  <polygon points="143,76 143,92 157,84" fill="white" opacity="0.75"/>
+
+  <!-- Phone notch -->
+  <rect x="138" y="42" width="23" height="6" rx="3" fill="#1a1a1a"/>
+
+  <!-- Home indicator -->
+  <rect x="138" y="157" width="23" height="3" rx="2" fill="#333"/>
+</svg>

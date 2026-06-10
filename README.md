@@ -1,4 +1,20 @@
-# TwitchTok
+<div align="center">
+  <img src="assets/logo.svg" width="160" height="160" alt="TwitchTok"/>
+
+  <h1>TwitchTok</h1>
+
+  <p>Convert Twitch clips into vertical short-form video with AI subtitles</p>
+
+  [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](#)
+  [![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](#)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](#)
+  [![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logoColor=white)](#)
+  [![Whisper](https://img.shields.io/badge/Whisper-412991?style=for-the-badge&logo=openai&logoColor=white)](#)
+  [![Twitch](https://img.shields.io/badge/Twitch-9146FF?style=for-the-badge&logo=twitch&logoColor=white)](#)
+
+</div>
+
+---
 
 Convert landscape Twitch clips into vertical 9:16 short-form videos with AI-generated subtitles, smart crop detection, and social-media metadata. Includes an interactive demo website for live showcasing.
 
@@ -75,7 +91,7 @@ Open **PowerShell as Administrator** and run:
 # Git (includes Git Bash and Git Credential Manager)
 winget install Git.Git
 
-# Git LFS — must be installed before cloning
+# Git LFS - must be installed before cloning
 winget install GitHub.GitLFS
 
 # Python 3.11 (tick "Add python.exe to PATH" in the installer)
