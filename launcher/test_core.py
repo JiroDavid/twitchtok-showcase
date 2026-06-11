@@ -49,12 +49,43 @@ class CommandTest(unittest.TestCase):
         self.assertIn("uvicorn", cmd)
         self.assertIn("app.main:app", cmd)
         self.assertIn("8000", cmd)
-        self.assertIn(".venv", cmd[0])
+        self.assertEqual(cmd[0], str(core.VENV_PYTHON))
 
     def test_frontend_command_is_npm_run_dev(self):
         cmd = core.frontend_command()
         self.assertTrue(cmd[0].startswith("npm"))
         self.assertEqual(cmd[1:], ["run", "dev"])
+
+
+class HttpAliveTest(unittest.TestCase):
+    def test_dead_port_is_not_alive(self):
+        server = socket.socket()
+        server.bind(("127.0.0.1", 0))
+        port = server.getsockname()[1]
+        server.close()
+        self.assertFalse(core.http_alive(f"http://127.0.0.1:{port}"))
+
+
+class ManagedProcessTest(unittest.TestCase):
+    def test_streams_output_and_stops(self):
+        log_queue = queue.Queue()
+        child = [sys.executable, "-u", "-c",
+                 "import time; print('hello from child'); time.sleep(30)"]
+        proc = core.ManagedProcess("child", lambda: child, Path.cwd(), 65123, log_queue)
+        proc.start()
+        lines = []
+        deadline = time.time() + 10
+        while time.time() < deadline and not any("hello from child" in l for _, l in lines):
+            try:
+                lines.append(log_queue.get(timeout=0.5))
+            except queue.Empty:
+                pass
+        self.assertTrue(any("hello from child" in l for _, l in lines))
+        self.assertTrue(proc.is_running())
+        proc.stop()
+        time.sleep(0.5)
+        self.assertFalse(proc.is_running())
+        self.assertFalse(proc.has_died())
 
 
 if __name__ == "__main__":

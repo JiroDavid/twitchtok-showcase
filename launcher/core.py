@@ -56,3 +56,74 @@ def http_alive(url):
             return True
     except Exception:
         return False
+
+
+class ManagedProcess:
+    """Wraps one server process. stdout/stderr lines land on log_queue as
+    (name, line) tuples. stop() kills the whole tree: npm spawns child node
+    processes that would otherwise survive and keep the port busy."""
+
+    def __init__(self, name, command_factory, cwd, port, log_queue):
+        self.name = name
+        self.command_factory = command_factory
+        self.cwd = cwd
+        self.port = port
+        self.log_queue = log_queue
+        self.process = None
+
+    def is_running(self):
+        return self.process is not None and self.process.poll() is None
+
+    def has_died(self):
+        return self.process is not None and self.process.poll() is not None
+
+    def start(self):
+        if self.is_running():
+            self.log_queue.put(("launcher", f"{self.name} is already running"))
+            return
+        if port_in_use(self.port):
+            self.log_queue.put((
+                "launcher",
+                f"port {self.port} is already in use, not starting {self.name}. "
+                f"Close whatever is using it (or reboot) and try again.",
+            ))
+            return
+        kwargs = {}
+        if IS_WINDOWS:
+            kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        else:
+            kwargs["start_new_session"] = True
+        try:
+            self.process = subprocess.Popen(
+                self.command_factory(), cwd=str(self.cwd),
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, encoding="utf-8", errors="replace", **kwargs,
+            )
+        except OSError as exc:
+            self.process = None
+            self.log_queue.put(("launcher", f"failed to start {self.name}: {exc}"))
+            return
+        self.log_queue.put(("launcher", f"{self.name} starting (pid {self.process.pid})"))
+        threading.Thread(target=self._pump, args=(self.process,), daemon=True).start()
+
+    def _pump(self, process):
+        for line in process.stdout:
+            self.log_queue.put((self.name, line.rstrip("\n")))
+        code = process.wait()
+        self.log_queue.put(("launcher", f"{self.name} exited with code {code}"))
+
+    def stop(self):
+        if not self.is_running():
+            self.process = None
+            return
+        pid = self.process.pid
+        self.log_queue.put(("launcher", f"stopping {self.name} (pid {pid})"))
+        if IS_WINDOWS:
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(pid)],
+                           capture_output=True)
+        else:
+            try:
+                os.killpg(os.getpgid(pid), signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+        self.process = None
