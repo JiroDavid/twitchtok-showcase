@@ -4,8 +4,15 @@ echo Installs Git, Git LFS, Python 3.11, Node.js LTS and FFmpeg via winget.
 echo.
 
 net session >nul 2>nul
-if not %errorlevel%==0 (
+if errorlevel 1 (
     echo Please right-click this file and choose "Run as administrator".
+    pause
+    exit /b 1
+)
+
+where winget >nul 2>nul
+if errorlevel 1 (
+    echo winget not found. Update Windows / App Installer first: https://aka.ms/getwinget
     pause
     exit /b 1
 )
