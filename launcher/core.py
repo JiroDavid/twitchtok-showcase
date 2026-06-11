@@ -13,6 +13,9 @@ FRONTEND_DIR = REPO_ROOT / "frontend"
 LOGS_DIR = REPO_ROOT / "launcher" / "logs"
 
 VENV_DIR = BACKEND_DIR / ".venv"
+# the README's Windows guide creates .venv, but pre-existing dev setups use venv
+if not VENV_DIR.exists() and (BACKEND_DIR / "venv").exists():
+    VENV_DIR = BACKEND_DIR / "venv"
 VENV_PYTHON = VENV_DIR / ("Scripts/python.exe" if IS_WINDOWS else "bin/python")
 NPM = "npm.cmd" if IS_WINDOWS else "npm"
 
