@@ -13,8 +13,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -39,8 +39,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -65,8 +65,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -91,8 +91,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -117,8 +117,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -143,8 +143,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -169,8 +169,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -195,8 +195,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -221,8 +221,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -247,8 +247,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -273,8 +273,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -299,8 +299,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -326,7 +326,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -352,7 +352,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -378,7 +378,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -404,7 +404,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -430,7 +430,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -456,7 +456,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -482,7 +482,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -507,8 +507,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -533,8 +533,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -560,7 +560,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -586,7 +586,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -612,7 +612,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF69B4",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -637,8 +637,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -663,8 +663,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -689,8 +689,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -715,8 +715,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -742,7 +742,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -768,7 +768,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -794,7 +794,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -820,7 +820,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -846,7 +846,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -871,8 +871,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -897,8 +897,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -923,8 +923,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -949,8 +949,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -975,8 +975,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1002,7 +1002,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1028,7 +1028,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1054,7 +1054,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1080,7 +1080,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1106,7 +1106,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1132,7 +1132,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1158,7 +1158,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1183,8 +1183,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1210,7 +1210,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1236,7 +1236,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1262,7 +1262,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1288,7 +1288,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1313,8 +1313,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1340,7 +1340,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1366,7 +1366,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1392,7 +1392,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1418,7 +1418,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1444,7 +1444,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1470,7 +1470,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1496,7 +1496,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1522,7 +1522,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1548,7 +1548,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1573,8 +1573,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1599,8 +1599,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1625,8 +1625,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1651,8 +1651,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1677,8 +1677,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1703,8 +1703,8 @@
       "words": [],
       "is_manual": true,
       "style": {
-        "color": "#FFFFFF",
-        "font_family": "Montserrat",
+        "color": "#D4AF0D",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1730,7 +1730,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF69B4",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1756,7 +1756,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1782,7 +1782,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0
@@ -1808,7 +1808,7 @@
       "is_manual": true,
       "style": {
         "color": "#FF8C00",
-        "font_family": "Montserrat",
+        "font_family": "Barlow Condensed",
         "font_size": 140,
         "outline": 8.0,
         "shadow": 3.0

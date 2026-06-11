@@ -63,42 +63,8 @@ export function RevealPanel({
         Step 4 -- Your Highlight
       </p>
 
+      {/* Phone + CTA side by side */}
       <div className="flex flex-wrap items-center justify-center gap-12">
-
-        {/* AI-generated TikTok metadata — left of phone */}
-        {selectedClipIndex !== null && CLIP_METADATA[selectedClipIndex] && (() => {
-          const meta = CLIP_METADATA[selectedClipIndex];
-          return (
-            <div className="w-72 shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <span className="rounded-full bg-[#9146FF]/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-[#9146FF]">
-                  ✦ AI Generated
-                </span>
-                <span className="text-[10px] text-zinc-600">TikTok metadata</span>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Title</p>
-                  <p className="text-sm font-bold text-zinc-100">{meta.title}</p>
-                </div>
-                <div>
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Description</p>
-                  <p className="text-sm leading-relaxed text-zinc-400">{meta.description}</p>
-                </div>
-                <div>
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Hashtags</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {meta.hashtags.map((tag) => (
-                      <span key={tag} className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs font-medium text-[#9146FF]">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
 
         {/* Phone frame */}
         <div className="animate-reveal-phone w-[26rem] rounded-[44px] border-2 border-[#9146FF] bg-zinc-950 p-3 shadow-[0_0_48px_rgba(145,70,255,0.35),0_16px_48px_rgba(0,0,0,0.7)]">
@@ -120,7 +86,6 @@ export function RevealPanel({
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
             />
-            {/* Play/pause overlay */}
             {!isPlaying && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
@@ -196,6 +161,41 @@ export function RevealPanel({
           </div>
         </div>
       </div>
+
+      {/* AI-generated TikTok metadata — below phone */}
+      {selectedClipIndex !== null && CLIP_METADATA[selectedClipIndex] && (() => {
+        const meta = CLIP_METADATA[selectedClipIndex];
+        return (
+          <div className="mx-auto mt-12 max-w-xl rounded-xl border border-zinc-800 bg-zinc-900/60 p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="rounded-full bg-[#9146FF]/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-[#9146FF]">
+                ✦ AI Generated
+              </span>
+              <span className="text-[10px] text-zinc-600">TikTok metadata</span>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Title</p>
+                <p className="text-sm font-bold text-zinc-100">{meta.title}</p>
+              </div>
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Description</p>
+                <p className="text-sm leading-relaxed text-zinc-400">{meta.description}</p>
+              </div>
+              <div>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Hashtags</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {meta.hashtags.map((tag) => (
+                    <span key={tag} className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs font-medium text-[#9146FF]">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </section>
   );
 }

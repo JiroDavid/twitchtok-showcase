@@ -40,3 +40,5 @@ backend/storage/outputs/*
 .superpowers/
 
 launcher/logs/
+backend/storage/captions/
+backend/storage/graphs/

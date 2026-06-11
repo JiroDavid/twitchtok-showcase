@@ -39,6 +39,11 @@ def frontend_command():
     return [NPM, "run", "dev"]
 
 
+def is_git_repo():
+    # .git is a file (not a dir) in worktrees, so check existence not is_dir
+    return (REPO_ROOT / ".git").exists()
+
+
 def is_lfs_pointer(path):
     try:
         with open(path, "rb") as f:

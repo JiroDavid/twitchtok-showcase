@@ -215,9 +215,17 @@ class LauncherApp(tk.Tk):
                          f"setup: demo cache file missing: {core.LFS_CHECK_FILE}")
                 ok = False
             elif core.is_lfs_pointer(core.LFS_CHECK_FILE):
-                self.log("launcher",
-                         "setup: demo videos are un-pulled LFS stubs - "
-                         "run: git lfs install, then: git lfs pull")
+                if core.is_git_repo():
+                    self.log("launcher",
+                             "setup: demo videos are un-pulled LFS stubs - "
+                             "run: git lfs install, then: git lfs pull")
+                else:
+                    self.log("launcher",
+                             "setup: demo videos are LFS stubs and this folder is a "
+                             "ZIP download (no .git), so git lfs pull cannot work here. "
+                             "Instead run: git lfs install, then: "
+                             "git clone https://github.com/JiroDavid/twitchtok-showcase.git "
+                             "and use the launcher from that folder")
                 ok = False
             self.log("launcher",
                      "setup: ALL CHECKS PASSED - press Start Both" if ok

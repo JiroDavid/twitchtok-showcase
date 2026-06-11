@@ -25,6 +25,19 @@ class IsLfsPointerTest(unittest.TestCase):
         self.assertFalse(core.is_lfs_pointer("/nonexistent/file.mp4"))
 
 
+class IsGitRepoTest(unittest.TestCase):
+    def test_real_clone_is_a_repo(self):
+        self.assertTrue(core.is_git_repo())
+
+    def test_zip_extract_is_not_a_repo(self):
+        original = core.REPO_ROOT
+        try:
+            core.REPO_ROOT = Path(tempfile.mkdtemp())
+            self.assertFalse(core.is_git_repo())
+        finally:
+            core.REPO_ROOT = original
+
+
 class PortInUseTest(unittest.TestCase):
     def test_listening_port_is_detected(self):
         server = socket.socket()
