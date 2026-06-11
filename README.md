@@ -175,6 +175,22 @@ Open **http://localhost:3000** in a browser.
 
 ---
 
+## Festival launcher (Windows)
+
+For demo machines there is a one-window control panel instead of two PowerShell windows:
+
+1. On a fresh PC: right-click `install-prereqs.bat`, choose "Run as administrator",
+   then open a new terminal and run `git lfs install`.
+2. Double-click `launcher.bat`.
+3. Press **Setup** once (creates the venv, installs Python and npm dependencies,
+   verifies FFmpeg, Node, Git LFS and the demo videos).
+4. Press **Start Both**, wait for both status dots to turn green, then **Open Demo**.
+
+The log pane shows both servers. **Copy All Logs** puts everything on the clipboard
+for troubleshooting. Logs are also written to `launcher/logs/`.
+
+---
+
 ## Linux / macOS / WSL setup
 
 ### 1. Clone (with LFS)
