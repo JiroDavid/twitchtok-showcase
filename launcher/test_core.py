@@ -1,3 +1,4 @@
+import os
 import queue
 import socket
 import sys
@@ -82,10 +83,13 @@ class ManagedProcessTest(unittest.TestCase):
                 pass
         self.assertTrue(any("hello from child" in l for _, l in lines))
         self.assertTrue(proc.is_running())
+        pid = proc.process.pid
         proc.stop()
         time.sleep(0.5)
         self.assertFalse(proc.is_running())
         self.assertFalse(proc.has_died())
+        with self.assertRaises(ProcessLookupError):
+            os.kill(pid, 0)
 
 
 if __name__ == "__main__":

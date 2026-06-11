@@ -109,6 +109,7 @@ class ManagedProcess:
     def _pump(self, process):
         for line in process.stdout:
             self.log_queue.put((self.name, line.rstrip("\n")))
+        process.stdout.close()
         code = process.wait()
         self.log_queue.put(("launcher", f"{self.name} exited with code {code}"))
 
@@ -124,6 +125,6 @@ class ManagedProcess:
         else:
             try:
                 os.killpg(os.getpgid(pid), signal.SIGTERM)
-            except ProcessLookupError:
+            except (ProcessLookupError, PermissionError):
                 pass
         self.process = None
