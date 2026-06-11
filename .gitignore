@@ -38,3 +38,5 @@ backend/storage/outputs/*
 
 # Brainstorming session files (local only)
 .superpowers/
+
+launcher/logs/
