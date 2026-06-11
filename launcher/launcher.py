@@ -200,10 +200,15 @@ class LauncherApp(tk.Tk):
                              f"setup: MISSING {tool} - install with: {fix}, "
                              f"then close and reopen the launcher")
                     ok = False
-            lfs = subprocess.run(["git", "lfs", "version"], capture_output=True)
-            if lfs.returncode != 0:
+            try:
+                lfs = subprocess.run(["git", "lfs", "version"], capture_output=True)
+                if lfs.returncode != 0:
+                    self.log("launcher",
+                             "setup: MISSING git lfs - install with: winget install GitHub.GitLFS")
+                    ok = False
+            except FileNotFoundError:
                 self.log("launcher",
-                         "setup: MISSING git lfs - install with: winget install GitHub.GitLFS")
+                         "setup: MISSING git - install with: winget install Git.Git")
                 ok = False
             if not core.LFS_CHECK_FILE.exists():
                 self.log("launcher",
@@ -227,8 +232,8 @@ class LauncherApp(tk.Tk):
 
     def _on_close(self):
         self.on_stop_all()
-        self.log_file.close()
         self.destroy()
+        self.log_file.close()
 
 
 def main():
